@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps TechStore — Інтернет-магазин на мікросервісах</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="resetFilters()">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                        <i data-lucide="cpu" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+                            DevOps TechStore
+                        </span>
+                        <div class="text-[11px] text-slate-400 font-mono">Spring Boot Microservices</div>
+                    </div>
+                </div>
+
+                <!-- Search Input -->
+                <div class="hidden md:flex flex-1 max-w-md mx-8">
+                    <div class="relative w-full">
+                        <input id="searchInput" type="text" placeholder="Пошук товарів..." 
+                               class="w-full pl-10 pr-4 py-2 text-sm bg-slate-100 border border-transparent rounded-full focus:bg-white focus:border-indigo-500 focus:outline-none transition">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Status, Orders, Cart -->
+                <div class="flex items-center space-x-3">
+                    <!-- Backend Health Status Badge -->
+                    <div id="healthBadge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title="Статус бекенд мікросервісів">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 badge-pulse"></span>
+                        <span id="healthText">Сервіси онлайн</span>
+                    </div>
+
+                    <!-- Orders Button -->
+                    <button onclick="openOrdersModal()" class="flex items-center space-x-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+                        <i data-lucide="package" class="w-4 h-4"></i>
+                        <span>Мої замовлення</span>
+                    </button>
+
+                    <!-- Cart Button -->
+                    <button onclick="openCartModal()" class="relative flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition">
+                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                        <span class="font-medium">Кошик</span>
+                        <span id="cartCountBadge" class="hidden ml-1 px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        <!-- Hero Section -->
+        <div class="mb-8 p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white shadow-xl relative overflow-hidden">
+            <div class="relative z-10 max-w-2xl">
+                <span class="inline-block px-3 py-1 mb-3 text-xs font-semibold tracking-wider uppercase bg-indigo-500/30 text-indigo-200 rounded-full border border-indigo-400/30">
+                    Лабораторна робота №1 • DevOps & Docker
+                </span>
+                <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
+                    Сучасний магазин для DevOps інженерів
+                </h1>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-4">
+                    Архітектура: <strong>Product Microservice</strong> (Spring Boot) + <strong>Order Microservice</strong> (Spring Boot) + <strong>PostgreSQL</strong> + <strong>Nginx Reverse Proxy</strong>.
+                </p>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="px-2.5 py-1 rounded bg-white/10 backdrop-blur-sm border border-white/20">☕ Java 21</span>
+                    <span class="px-2.5 py-1 rounded bg-white/10 backdrop-blur-sm border border-white/20">🍃 Spring Boot 3.3</span>
+                    <span class="px-2.5 py-1 rounded bg-white/10 backdrop-blur-sm border border-white/20">🐳 Docker & Compose</span>
+                    <span class="px-2.5 py-1 rounded bg-white/10 backdrop-blur-sm border border-white/20">🐘 PostgreSQL 16</span>
+                    <span class="px-2.5 py-1 rounded bg-white/10 backdrop-blur-sm border border-white/20">🧪 JUnit 5 & MockMvc</span>
+                </div>
+            </div>
+            <div class="absolute -right-12 -bottom-12 opacity-10 text-white pointer-events-none">
+                <i data-lucide="container" class="w-96 h-96"></i>
+            </div>
+        </div>
+
+        <!-- Categories Filter & Search Mobile -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8">
+            <div id="categoryPills" class="flex flex-wrap items-center gap-2">
+                <button onclick="filterCategory(null)" class="category-btn active px-4 py-1.5 text-xs font-medium rounded-full bg-indigo-600 text-white transition">
+                    Всі товари
+                </button>
+            </div>
+            <div class="text-xs text-slate-500 self-center">
+                Знайдено: <span id="productCount" class="font-bold text-slate-700">0</span> товарів
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading Skeleton -->
+            <div class="col-span-full py-16 text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p class="mt-2 text-sm text-slate-500">Завантаження каталогу товарів...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cart Modal / Drawer -->
+    <div id="cartModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex justify-end transition-opacity">
+        <div class="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-indigo-600"></i>
+                    <h2 class="text-lg font-bold">Кошик замовлення</h2>
+                </div>
+                <button onclick="closeCartModal()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Items List -->
+            <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Dynamically injected -->
+            </div>
+
+            <!-- Checkout Form & Footer -->
+            <div class="border-t border-slate-200 p-4 bg-slate-50 space-y-4">
+                <div class="flex items-center justify-between text-base font-bold">
+                    <span>Разом до сплати:</span>
+                    <span id="cartTotalPrice" class="text-indigo-600 text-xl">$0.00</span>
+                </div>
+
+                <form id="checkoutForm" onsubmit="submitOrder(event)" class="space-y-3 pt-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ваше ім'я</label>
+                        <input type="text" id="custName" required placeholder="Олександр Шевченко" 
+                               class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email</label>
+                        <input type="email" id="custEmail" required placeholder="oleksandr@example.com" 
+                               class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Адреса доставки</label>
+                        <input type="text" id="custAddress" required placeholder="м. Київ, вул. Хрещатик, 24" 
+                               class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <button type="submit" id="submitOrderBtn" 
+                            class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                        <span>Оформити замовлення</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Modal -->
+    <div id="ordersModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="package-check" class="w-6 h-6 text-indigo-600"></i>
+                    <h2 class="text-xl font-bold">Історія замовлень (Order Service)</h2>
+                </div>
+                <button onclick="closeOrdersModal()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="ordersContainer" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <!-- Dynamically filled -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <p>Лабораторна робота №1: «Віртуалізація та контейнеризація»</p>
+        <p class="mt-1">Spring Boot (Java 21) • Docker • Docker Compose • PostgreSQL</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

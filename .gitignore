@@ -1,0 +1,24 @@
+# Maven target directories
+**/target/
+target/
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Docker local data and caches
+.m2/
+postgres_data/
+
+# Logs
+*.log
