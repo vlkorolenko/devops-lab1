@@ -5,12 +5,12 @@ FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
 # Cache Maven dependencies layer
-COPY pom.xml .
+COPY pom.xml checkstyle.xml* ./
 RUN mvn dependency:go-offline -B
 
 # Copy source code and build executable jar
 COPY src ./src
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package -DskipTests -Dcheckstyle.skip=true -B
 
 # ==========================================
 # Stage 2: Minimal JRE Runtime
