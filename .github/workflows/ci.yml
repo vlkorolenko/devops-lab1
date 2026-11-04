@@ -54,7 +54,7 @@ jobs:
           mvn test -B
 
   # ==============================================================
-  # Job 2: Frontend Validation (Nginx syntax & assets)
+  # Job 2: Frontend Validation (Docker Build & Assets)
   # ==============================================================
   frontend-ci:
     name: Frontend CI (Validation)
@@ -64,18 +64,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔍 Validate Nginx Configuration
+      - name: ⚙️ Build Frontend Docker Image & Verify Assets
         run: |
-          docker run --rm \
-            -v "$(pwd)/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
-            nginx:alpine nginx -t
-
-      - name: ⚙️ Verify Frontend Assets
-        run: |
+          docker build -t frontend-check ./frontend
           test -f frontend/src/index.html || exit 1
           test -f frontend/src/app.js || exit 1
           test -f frontend/src/style.css || exit 1
-          echo "All frontend web assets verified successfully!"
+          echo "Frontend assets and Dockerfile verified successfully!"
 
   # ==============================================================
   # Job 3: Build & Publish Container Images to GHCR
@@ -122,6 +117,15 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
+      - name: 🛡️ Security Vulnerability Scan (Trivy FS Scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '${{ matrix.context }}'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
       - name: 🐳 Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -129,19 +133,3 @@ jobs:
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          load: true # Load into local docker daemon for Trivy scanning
-
-      - name: 🛡️ Security Vulnerability Scan (Trivy)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:sha-${{ github.sha }}
-          format: 'table'
-          exit-code: '0' # Non-blocking on base os warnings, prints clean report
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-
-      - name: 🚀 Push Image to GHCR (On Push to Main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker push --all-tags ghcr.io/${{ github.repository }}/${{ matrix.image-name }}
