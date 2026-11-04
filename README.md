@@ -1,12 +1,12 @@
-# Лабораторна робота №1: Віртуалізація та контейнеризація
+# DevOps TechStore — Лабораторні роботи №1 та №2
 **Предмет:** Технології DevOps  
-**Проєкт:** DevOps TechStore (Мікросервісний інтернет-магазин на Java & Spring Boot)
+**Теми:** «Віртуалізація та контейнеризація» (Лаб 1) та «Continuous Integration & Delivery» (Лаб 2)
 
 ---
 
 ## 📋 Огляд проєкту та архітектура
 
-**DevOps TechStore** — це повнофункціональний веб-додаток електронної комерції, побудований за сучасною мікросервісною архітектурою на базі **Java 21**, **Spring Boot 3**, **PostgreSQL 16**, **Nginx** та **Docker Compose**.
+**DevOps TechStore** — це повнофункціональний веб-додаток електронної комерції, побудований за мікросервісною архітектурою на базі **Java 21**, **Spring Boot 3.3**, **PostgreSQL 16**, **Nginx** та **Docker Compose**, з автоматизованим CI/CD пайплайном у **GitHub Actions** та публікацією образів у **GitHub Container Registry (GHCR)**.
 
 ```
                            +---------------------------+
@@ -47,26 +47,58 @@
 
 ---
 
-## ✅ Покриття вимог лабораторної роботи
+## 🔄 Лабораторна робота №2: Схема CI/CD Пайплайну (GitHub Actions)
 
-| № | Вимога завдання | Як реалізовано в проєкті |
-|---|----------------|--------------------------|
-| **1a** | Будь-яка мова та технології | **Java 21**, **Spring Boot 3.3**, Maven, Nginx |
-| **1b** | Веб-додаток + база даних | REST API сервіси підключені до **PostgreSQL 16** (з автоматичною міграцією та seed-даними) |
-| **1c** | Юніт або інтеграційні тести | **18 тестів** (JUnit 5, Mockito, MockMvc, Spring Boot Test, H2 In-Memory) |
-| **1d** | Складається з кількох частин (мікросервіси) | 3 незалежні сервіси (`product-service`, `order-service`, `frontend`) + PostgreSQL |
-| **2** | Dockerfile для кожного сервісу | Multi-stage Dockerfiles для обох Spring Boot додатків + оптимізований Nginx Dockerfile |
-| **3** | Docker Compose файл | `docker-compose.yml` з декларацією сервісів, healthcheck, volume persistence та мережею |
-| **4** | Збереження у Git / GitHub | Ініціалізовано git, підготовлено `.gitignore` та `.github/workflows/ci.yml` |
+Пайплайн налаштовано у файлі [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+```
++-----------------------------------------------------------------------------------+
+|                            Тригер: Push або Pull Request                          |
++-----------------------------------------+-----------------------------------------+
+                                          |
+        +---------------------------------+---------------------------------+
+        v                                                                   v
++---------------------------------------+                 +-----------------------------------+
+|  Job 1: backend-ci (matrix: 2 jobs)   |                 |       Job 2: frontend-ci          |
+|  [product-service, order-service]     |                 |  1. Validate Nginx config (test)  |
+|  1. Checkstyle (Static Analysis)      |                 |  2. Verify Static Assets (HTML/JS)|
+|  2. Build (compile & package)         |                 +-----------------+-----------------+
+|  3. Test (JUnit 5 & MockMvc)          |                                   |
+|  * fail-fast: false (паралельно)      |                                   |
++-------------------+-------------------+                                   |
+                    |                                                       |
+                    +-----------------------------+-------------------------+
+                                                  |
+                                                  v (needs: [backend-ci, frontend-ci])
+                        +---------------------------------------------------+
+                        | Job 3: docker-build-and-push (matrix: 3 services) |
+                        | [product-service, order-service, frontend]        |
+                        | 1. Docker Buildx setup                            |
+                        | 2. Build Docker images from Dockerfiles           |
+                        | 3. Security Scan with Trivy (Vulnerabilities)     |
+                        | 4. Tagging: sha-<commit> та latest                |
+                        | 5. Push to ghcr.io (ТІЛЬКИ при push у main)       |
+                        +---------------------------------------------------+
+```
 
 ---
 
-## 🚀 Швидкий запуск проєкту
+## ✅ Відповідність усім вимогам Лабораторної №2
 
-### 1. Запуск через Docker Compose (Всі сервіси)
+| № | Вимога завдання | Як реалізовано в проєкті |
+|---|----------------|--------------------------|
+| **1** | Підключити CI/CD (GitHub Actions) | Створено `.github/workflows/ci.yml`. Запускається на `push` у `main` та на будь-який `pull_request`. Статуси відображаються у PR. |
+| **2** | Збірка та тестування | Окремі матричні завдання з незалежним виконанням (`fail-fast: false`). Кроки `Build` (`mvn compile`) та `Test` (`mvn test`). Кешування через `cache: maven`. |
+| **3** | Статичний аналіз коду (Лінтер) | Підключено **Checkstyle** (`maven-checkstyle-plugin`) з `checkstyle.xml`. Крок є **блокуючим**: порушення правил негайно зупиняють пайплайн з помилкою. |
+| **4** | Збірка контейнерних образів | Завдання `docker-build-and-push` залежить (`needs`) від успіху тестів та лінтера. Додано безпекове сканування через **Trivy** (`aquasecurity/trivy-action`). |
+| **5** | Публікація в реєстрі (GHCR) | Автентифікація через `GITHUB_TOKEN`. Публікація в `ghcr.io` тільки для `push` у `main` (у PR лише збірка без пушу). Теги: `sha-${{ github.sha }}` та `latest`. |
+| **6** | Захист основної гілки | Інструкція з налаштування Branch Protection Rules на GitHub. Створено сценарій демонстрації заблокованого PR при зламаному тесті. |
 
-Для збірки та старту всіх контейнерів виконайте команду:
+---
 
+## 🚀 Швидкий локальний запуск проєкту
+
+### 1. Запуск через Docker Compose (Всі 4 сервіси)
 ```bash
 docker compose up -d --build
 ```
@@ -75,18 +107,11 @@ docker compose up -d --build
 make up
 ```
 
-Після запуску всі сервіси піднімуться у правильному порядку з урахуванням `healthcheck` бази даних:
 - **Веб-магазин (Frontend UI):** [http://localhost:8080](http://localhost:8080)
 - **Product Service API:** [http://localhost:8081/api/products](http://localhost:8081/api/products)
 - **Order Service API:** [http://localhost:8082/api/orders](http://localhost:8082/api/orders)
-- **База даних PostgreSQL:** `localhost:5432` (`shop_db`, user: `shop_user`)
 
----
-
-## 🧪 Запуск тестів (Unit & Integration)
-
-Всі тести ізольовані та виконуються у контейнері з Maven та базою даних H2 в пам'яті (In-Memory), що не потребує встановленої локально Java:
-
+### 2. Запуск локального лінтера та тестів
 ```bash
 ./run_tests.sh
 ```
@@ -94,74 +119,54 @@ make up
 ```bash
 make test
 ```
-
-### Тестове покриття:
-1. **Product Service (11 тестів):**
-   - `ProductServiceTest` (Unit): отримання списку, фільтрація за категорією, валідація, створення товару, обробка відсутності ID.
-   - `ProductControllerTest` (Integration): тестування REST ендпоінтів `GET /api/products`, `GET /api/products/categories`, перевірка валідації `400 Bad Request`, `404 Not Found`, `GET /actuator/health`.
-2. **Order Service (7 тестів):**
-   - `OrderServiceTest` (Unit): розрахунок вартості замовлення (`sum(price * quantity)`), створення замовлення, отримання за ID.
-   - `OrderControllerTest` (Integration): `GET /api/orders`, створення замовлення `POST /api/orders` (201 Created), валідація пустого кошика `400 Bad Request`, `GET /actuator/health`.
+Скрипт перевірить Checkstyle та виконає 18 тестів для обох сервісів.
 
 ---
 
-## 📡 Огляд REST API ендпоінтів
+## 🛡️ Налаштування захисту гілки (Branch Protection) на GitHub
 
-### Product Service (`:8081` або через фронтенд `:8080/api/products`):
-- `GET /api/products` — отримати список усіх товарів (підтримує `?category=...` та `?search=...`)
-- `GET /api/products/categories` — отримати перелік унікальних категорій
-- `GET /api/products/{id}` — отримати товар за ID
-- `POST /api/products` — додати новий товар
-- `DELETE /api/products/{id}` — видалити товар
-- `GET /actuator/health` — статус працездатності (Healthcheck)
+Щоб виконати вимогу №6:
 
-### Order Service (`:8082` або через фронтенд `:8080/api/orders`):
-- `GET /api/orders` — перелік замовлень
-- `GET /api/orders/{id}` — деталі замовлення
-- `POST /api/orders` — оформити нове замовлення
-- `GET /actuator/health` — статус працездатності (Healthcheck)
+1. Відкрийте ваш репозиторій на GitHub: [https://github.com/vlkorolenko/devops-lab1](https://github.com/vlkorolenko/devops-lab1)
+2. Перейдіть у **Settings** ➡️ зліва виберіть **Branches**.
+3. У блоці **Branch protection rules** натисніть кнопку **Add branch ruleset** або **Add rule**.
+4. В полі **Branch name pattern** вкажіть: `main`.
+5. Увімкніть галочки:
+   - ✅ **Require a pull request before merging** (вимагати PR перед злиттям, блокує прямий push).
+   - ✅ **Require status checks to pass before merging** (вимагати успішного проходження перевірок).
+   - У пошуку перевірок виберіть: `Backend CI (product-service)`, `Backend CI (order-service)`, `Frontend CI (Validation)`.
+6. Натисніть **Save changes** (або **Create**).
 
-#### Приклад створення замовлення через `curl`:
+---
+
+## 💥 Демонстрація заблокованого Pull Request (Вимога 6)
+
+Щоб продемонструвати викладачу, що захист гілки працює і блокує злиття:
+
+1. Створіть нову гілку для перевірки:
+   ```bash
+   git checkout -b feature/broken-test
+   ```
+2. Зламайте будь-який тест (наприклад, у `product-service/src/test/java/com/devops/shop/product/ProductServiceTest.java` змініть очікуваний розмір з `1` на `99`).
+3. Запушіть гілку:
+   ```bash
+   git add .
+   git commit -m "test: simulate broken test for PR check"
+   git push -u origin feature/broken-test
+   ```
+4. Відкрийте Pull Request на GitHub.
+5. GitHub Actions автоматично запуститься, впаде з помилкою ❌, і кнопка **Merge pull request** буде заблокована!
+
+---
+
+## 📦 Перевірка опублікованих образів у GHCR (Вимога 5)
+
+Після кожного push у гілку `main` образи публікуються в реєстр GitHub Packages:
+- `ghcr.io/vlkorolenko/devops-lab1/product-service:latest`
+- `ghcr.io/vlkorolenko/devops-lab1/order-service:latest`
+- `ghcr.io/vlkorolenko/devops-lab1/frontend:latest`
+
+Їх можна стягнути командою:
 ```bash
-curl -X POST http://localhost:8080/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customerName": "Олександр Шевченко",
-    "customerEmail": "oleksandr@example.com",
-    "customerAddress": "м. Київ, вул. Хрещатик 1",
-    "items": [
-      {
-        "productId": 1,
-        "productName": "Ноутбук Pro Developer 16\"",
-        "price": 1899.99,
-        "quantity": 1
-      }
-    ]
-  }'
-```
-
----
-
-## 🛠 Корисні команди управління
-
-| Команда | Опис |
-|---------|------|
-| `make up` або `docker compose up -d` | Запустити всі контейнери у фоновому режимі |
-| `make down` або `docker compose down` | Зупинити роботу контейнерів |
-| `make logs` або `docker compose logs -f` | Переглянути поточні логи всіх контейнерів |
-| `make test` або `./run_tests.sh` | Запустити всі 18 тестів |
-| `make ps` або `docker compose ps` | Перевірити статус та healthcheck сервісів |
-| `make clean` | Зупинити контейнери та видалити створені томи бази даних |
-
----
-
-## 📤 Завантаження проєкту на GitHub (Вимога 4)
-
-1. Створіть новий порожній репозиторій на [GitHub](https://github.com/new) (наприклад, `devops-lab1`).
-2. Виконайте в терміналі команди:
-
-```bash
-git remote add origin https://github.com/<YOUR_USERNAME>/devops-lab1.git
-git branch -M main
-git push -u origin main
+docker pull ghcr.io/vlkorolenko/devops-lab1/product-service:latest
 ```
