@@ -117,14 +117,10 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: 🛡️ Security Vulnerability Scan (Trivy FS Scan)
-        uses: aquasecurity/trivy-action@0.28.0
-        continue-on-error: true
-        with:
-          scan-type: 'fs'
-          scan-ref: '${{ matrix.context }}'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
+      - name: 🛡️ Security Vulnerability Scan (Trivy Container)
+        run: |
+          echo "Running Trivy security scanner on ${{ matrix.service }}..."
+          docker run --rm aquasec/trivy:latest fs --severity HIGH,CRITICAL ${{ matrix.context }} || true
 
       - name: 🐳 Build and Push Docker Image
         uses: docker/build-push-action@v5
