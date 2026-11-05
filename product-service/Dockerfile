@@ -4,11 +4,14 @@
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
-# Cache Maven dependencies layer
-COPY pom.xml checkstyle.xml* ./
-RUN mvn dependency:go-offline -B
+# Configure proxy for Maven if running in Docker Desktop environment
+RUN if nc -z -w 1 http.docker.internal 3128 2>/dev/null; then \
+      mkdir -p /root/.m2 && \
+      printf '<settings><proxies><proxy><id>d-http</id><active>true</active><protocol>http</protocol><host>http.docker.internal</host><port>3128</port></proxy><proxy><id>d-https</id><active>true</active><protocol>https</protocol><host>http.docker.internal</host><port>3128</port></proxy></proxies></settings>\n' > /root/.m2/settings.xml; \
+    fi
 
-# Copy source code and build executable jar
+# Copy source and build executable jar
+COPY pom.xml checkstyle.xml* ./
 COPY src ./src
 RUN mvn clean package -DskipTests -Dcheckstyle.skip=true -B
 

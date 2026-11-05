@@ -35,19 +35,19 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: 🔍 Static Code Analysis (Checkstyle)
+      - name: Static Code Analysis (Checkstyle)
         working-directory: ./${{ matrix.service }}
         run: |
           echo "Running Checkstyle static analysis for ${{ matrix.service }}..."
           mvn checkstyle:check -B
 
-      - name: ⚙️ Build Service (${{ matrix.service }})
+      - name: Build Service (${{ matrix.service }})
         working-directory: ./${{ matrix.service }}
         run: |
           echo "Compiling and packaging ${{ matrix.service }}..."
           mvn clean compile -B
 
-      - name: 🧪 Run Unit & Integration Tests (${{ matrix.service }})
+      - name: Run Unit & Integration Tests (${{ matrix.service }})
         working-directory: ./${{ matrix.service }}
         run: |
           echo "Executing tests for ${{ matrix.service }}..."
@@ -64,7 +64,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: ⚙️ Build Frontend Docker Image & Verify Assets
+      - name: Build Frontend Docker Image & Verify Assets
         run: |
           docker build -t frontend-check ./frontend
           test -f frontend/src/index.html || exit 1
@@ -117,12 +117,12 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: 🛡️ Security Vulnerability Scan (Trivy Container)
+      - name: Security Vulnerability Scan (Trivy Container)
         run: |
           echo "Running Trivy security scanner on ${{ matrix.service }}..."
           docker run --rm aquasec/trivy:latest fs --severity HIGH,CRITICAL ${{ matrix.context }} || true
 
-      - name: 🐳 Build and Push Docker Image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
