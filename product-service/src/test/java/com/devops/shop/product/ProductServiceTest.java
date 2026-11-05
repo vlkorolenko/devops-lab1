@@ -52,7 +52,8 @@ class ProductServiceTest {
 
         List<ProductDto> result = productService.getAllProducts(null, null);
 
-        assertThat(result).hasSize(1);
+        // INTENTIONAL FAILURE FOR LAB 2 DEMO (Requirement 6):
+        assertThat(result).hasSize(999);
         assertThat(result.get(0).name()).isEqualTo("Тестовий монітор");
         assertThat(result.get(0).price()).isEqualByComparingTo("299.99");
         verify(productRepository, times(1)).findAll();
@@ -65,7 +66,8 @@ class ProductServiceTest {
 
         List<ProductDto> result = productService.getAllProducts("monitors", null);
 
-        assertThat(result).hasSize(1);
+        // INTENTIONAL FAILURE FOR LAB 2 DEMO (Requirement 6):
+        assertThat(result).hasSize(999);
         assertThat(result.get(0).category()).isEqualTo("Monitors");
         verify(productRepository, times(1)).findByCategoryIgnoreCase("monitors");
     }
