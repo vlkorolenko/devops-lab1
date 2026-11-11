@@ -6,16 +6,53 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
+import java.util.Locale;
 
 @Configuration
 public class DataInitializer {
 
+    private static final long SEED_ADVISORY_LOCK_ID = 42001L;
+
     @Bean
-    CommandLineRunner initDatabase(ProductRepository repository) {
-        return args -> {
-            if (repository.count() == 0) {
+    CommandLineRunner initDatabase(ProductRepository repository, DataSource dataSource) {
+        return args -> seedSafely(repository, dataSource);
+    }
+
+    private void seedSafely(ProductRepository repository, DataSource dataSource) {
+        boolean isPostgres = false;
+        try (Connection conn = dataSource.getConnection()) {
+            String dbName = conn.getMetaData().getDatabaseProductName();
+            isPostgres = dbName != null && dbName.toLowerCase(Locale.ROOT).contains("postgresql");
+            if (isPostgres) {
+                try (Statement stmt = conn.createStatement();
+                     ResultSet ignore = stmt.executeQuery("SELECT pg_advisory_lock(" + SEED_ADVISORY_LOCK_ID + ")")) {
+                    seedIfEmpty(repository);
+                } finally {
+                    try (Statement unlockStmt = conn.createStatement();
+                         ResultSet ignore = unlockStmt.executeQuery("SELECT pg_advisory_unlock(" + SEED_ADVISORY_LOCK_ID + ")")) {
+                        // Lock released
+                    }
+                }
+                return;
+            }
+        } catch (Exception ex) {
+            if (!isPostgres) {
+                seedIfEmpty(repository);
+                return;
+            }
+            throw new IllegalStateException("Failed to initialize seed products safely", ex);
+        }
+        seedIfEmpty(repository);
+    }
+
+    private void seedIfEmpty(ProductRepository repository) {
+        if (repository.count() == 0) {
                 List<Product> demoProducts = List.of(
                         new Product(
                                 "Ноутбук Pro Developer 16\"",
@@ -67,7 +104,6 @@ public class DataInitializer {
                         )
                 );
                 repository.saveAll(demoProducts);
-            }
-        };
+        }
     }
 }

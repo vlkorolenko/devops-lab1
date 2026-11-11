@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: techstore-config
+  namespace: devops-techstore
+  labels:
+    app.kubernetes.io/part-of: devops-techstore
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/shop_db"
+  APP_ENVIRONMENT: "kubernetes-minikube"
+  APP_STORE_NAME: "DevOps TechStore (Kubernetes)"
+  SPRING_JPA_SHOW_SQL: "false"
+  LOGGING_LEVEL_COM_DEVOPS_SHOP: "INFO"
+  PRODUCT_SERVICE_HOST: "product-service.devops-techstore.svc.cluster.local"
+  ORDER_SERVICE_HOST: "order-service.devops-techstore.svc.cluster.local"
+  store-config.json: |
+    {
+      "storeName": "DevOps TechStore (Kubernetes)",
+      "environment": "minikube",
+      "currency": "USD",
+      "banner": "Лабораторна робота №3 • Kubernetes (minikube)"
+    }

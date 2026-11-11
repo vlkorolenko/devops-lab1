@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devops-techstore
+  labels:
+    app.kubernetes.io/part-of: devops-techstore
+    managed-by: kubectl

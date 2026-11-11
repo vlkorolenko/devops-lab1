@@ -6,6 +6,7 @@ let searchQuery = "";
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+    loadRuntimeInfo();
     loadProducts();
     loadCategories();
     checkHealth();
@@ -13,6 +14,53 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(checkHealth, 15000); // Check service health every 15s
     lucide.createIcons();
 });
+
+// Load Kubernetes Pod & ConfigMap runtime metadata
+async function loadRuntimeInfo() {
+    let appVersion = "";
+    try {
+        const infoRes = await fetch("/k8s-info", { cache: "no-store" });
+        if (infoRes.ok) {
+            const info = await infoRes.json();
+            appVersion = info.version || "";
+            const podBadge = document.getElementById("podInfoBadge");
+            if (podBadge && info.pod) {
+                podBadge.innerText = `Pod: ${info.pod}`;
+            }
+            const verBadge = document.getElementById("appVersionBadge");
+            if (verBadge && appVersion) {
+                verBadge.innerText = `v${appVersion}`;
+            }
+        }
+    } catch (e) {
+        console.debug("Runtime /k8s-info unavailable:", e);
+    }
+
+    try {
+        const cfgRes = await fetch("/config/store-config.json?t=" + Date.now(), { cache: "no-store" });
+        if (cfgRes.ok) {
+            const cfg = await cfgRes.json();
+            if (cfg.storeName) {
+                const titleEl = document.getElementById("storeTitle");
+                if (titleEl) titleEl.innerText = cfg.storeName;
+            }
+            if (cfg.banner) {
+                const bannerEl = document.getElementById("heroBanner");
+                if (bannerEl) {
+                    bannerEl.innerText = appVersion ? `${cfg.banner} • v${appVersion}` : cfg.banner;
+                }
+            }
+            if (cfg.environment) {
+                const footerEl = document.getElementById("footerEnvInfo");
+                if (footerEl) {
+                    footerEl.innerText = `${cfg.storeName || "DevOps TechStore"} (${cfg.environment}) • v${appVersion || "1.0.0"}`;
+                }
+            }
+        }
+    } catch (e) {
+        console.debug("Optional ConfigMap /config/store-config.json not mounted:", e);
+    }
+}
 
 // Fetch products from Product Microservice
 async function loadProducts() {

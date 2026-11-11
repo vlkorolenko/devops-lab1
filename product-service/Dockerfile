@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build the application with Maven
 # ==========================================
-FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
+FROM --platform=$BUILDPLATFORM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
 # Configure proxy for Maven if running in Docker Desktop environment
@@ -19,6 +19,9 @@ RUN mvn clean package -DskipTests -Dcheckstyle.skip=true -B
 # Stage 2: Minimal JRE Runtime
 # ==========================================
 FROM eclipse-temurin:21-jre-alpine AS runtime
+
+ARG APP_VERSION=1.0.0
+ENV APP_VERSION=${APP_VERSION}
 
 # Install wget for Docker healthcheck
 RUN apk add --no-cache wget

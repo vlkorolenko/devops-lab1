@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: devops-techstore
+  labels:
+    app: order-service
+    tier: backend
+    app.kubernetes.io/part-of: devops-techstore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: order-service
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: order-service
+        tier: backend
+        app.kubernetes.io/part-of: devops-techstore
+    spec:
+      containers:
+        - name: order-service
+          image: ghcr.io/vlkorolenko/devops-lab1/order-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -Xms96m -Xmx192m"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: SPRING_DATASOURCE_URL
+            - name: APP_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: APP_ENVIRONMENT
+            - name: APP_STORE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: APP_STORE_NAME
+            - name: SPRING_JPA_SHOW_SQL
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: SPRING_JPA_SHOW_SQL
+            - name: LOGGING_LEVEL_COM_DEVOPS_SHOP
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: LOGGING_LEVEL_COM_DEVOPS_SHOP
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: techstore-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: techstore-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: techstore-secret
+                  key: INTERNAL_API_KEY
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "192Mi"
+            limits:
+              cpu: "500m"
+              memory: "320Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5

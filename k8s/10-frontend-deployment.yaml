@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: devops-techstore
+  labels:
+    app: frontend
+    tier: frontend
+    app.kubernetes.io/part-of: devops-techstore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: frontend
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: frontend
+        app.kubernetes.io/part-of: devops-techstore
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/vlkorolenko/devops-lab1/frontend:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: APP_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: APP_ENVIRONMENT
+            - name: APP_STORE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: APP_STORE_NAME
+            - name: PRODUCT_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: PRODUCT_SERVICE_HOST
+            - name: ORDER_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: techstore-config
+                  key: ORDER_SERVICE_HOST
+          volumeMounts:
+            - name: store-config-volume
+              mountPath: /usr/share/nginx/html/config/store-config.json
+              subPath: store-config.json
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "64Mi"
+          readinessProbe:
+            httpGet:
+              path: /k8s-info
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /k8s-info
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+      volumes:
+        - name: store-config-volume
+          configMap:
+            name: techstore-config
+            items:
+              - key: store-config.json
+                path: store-config.json

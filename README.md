@@ -1,6 +1,6 @@
-# DevOps TechStore — Лабораторні роботи №1 та №2
+# DevOps TechStore — Лабораторні роботи №1, №2 та №3
 **Предмет:** Технології DevOps  
-**Теми:** «Віртуалізація та контейнеризація» (Лаб 1) та «Continuous Integration & Delivery» (Лаб 2)
+**Теми:** «Віртуалізація та контейнеризація» (Лаб 1), «Continuous Integration & Delivery» (Лаб 2) та «Розгортання власного застосунку в Kubernetes» (Лаб 3)
 
 ---
 
@@ -170,3 +170,115 @@ make test
 ```bash
 docker pull ghcr.io/vlkorolenko/devops-lab1/product-service:latest
 ```
+
+---
+
+## ☸️ Лабораторна робота №3: Розгортання в Kubernetes (Minikube)
+
+Проєкт повністю перенесено на маніфести Kubernetes у каталозі [`k8s/`](k8s/) (один файл — один об'єкт) з окремим namespace **`devops-techstore`** і версіонованими образами **`1.0.0`** та **`1.1.0`** (без використання тегу `latest`).
+
+### 📂 Структура каталогу `k8s/`
+
+| Файл | Об'єкт Kubernetes (`kind`) | Призначення |
+|------|---------------------------|-------------|
+| `k8s/00-namespace.yaml` | `Namespace` | Ізольований простір імен `devops-techstore` |
+| `k8s/01-configmap.yaml` | `ConfigMap` | Нечутливі параметри конфігурації (`techstore-config`) + JSON-файл конфігурації |
+| `k8s/02-secret.yaml` | `Secret` | Демо-облікові дані БД та API-ключ (`techstore-secret`) |
+| `k8s/03-postgres-pvc.yaml` | `PersistentVolumeClaim` | Постійний том `1Gi` (`ReadWriteOnce`) для PostgreSQL |
+| `k8s/04-postgres-deployment.yaml` | `Deployment` | База даних PostgreSQL 16 (`postgres:16-alpine`, `Recreate`, проби + PVC) |
+| `k8s/05-postgres-service.yaml` | `Service` | Внутрішній сервіс `ClusterIP` для PostgreSQL (`:5432`) |
+| `k8s/06-product-service-deployment.yaml` | `Deployment` | Каталог товарів (`2` репліки, `:1.0.0`, CPU/RAM limits, `/actuator/health/*`) |
+| `k8s/07-product-service-service.yaml` | `Service` | Внутрішній сервіс `ClusterIP` (`:8081`) |
+| `k8s/08-order-service-deployment.yaml` | `Deployment` | Сервіс замовлень (`2` репліки, `:1.0.0`, CPU/RAM limits, `/actuator/health/*`) |
+| `k8s/09-order-service-service.yaml` | `Service` | Внутрішній сервіс `ClusterIP` (`:8082`) |
+| `k8s/10-frontend-deployment.yaml` | `Deployment` | Nginx + Web UI (`2` репліки, `:1.0.0`, монтування `store-config.json` + проби) |
+| `k8s/11-frontend-service.yaml` | `Service` | Сервіс типу `NodePort` (`:80` -> `30080`) для доступу всередині кластера і з хоста |
+| `k8s/12-ingress.yaml` | `Ingress` | Вхідна маршрутизація HTTP через `ingress-nginx` на сервіс `frontend` |
+
+---
+
+### 🔧 Перелік параметрів у `ConfigMap` (`techstore-config`) та `Secret` (`techstore-secret`)
+
+#### 1. `ConfigMap` (`k8s/01-configmap.yaml`)
+
+| Ключ | Значення | Куди та як підключено |
+|------|----------|-----------------------|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/shop_db` | Змінна оточення (`configMapKeyRef`) у `product-service`, `order-service` |
+| `APP_ENVIRONMENT` | `kubernetes-minikube` | Змінна оточення у `product-service`, `order-service`, `frontend` |
+| `APP_STORE_NAME` | `DevOps TechStore (Kubernetes)` | Змінна оточення у `product-service`, `order-service`, `frontend` |
+| `SPRING_JPA_SHOW_SQL` | `false` | Змінна оточення у `product-service`, `order-service` |
+| `LOGGING_LEVEL_COM_DEVOPS_SHOP` | `INFO` | Змінна оточення у `product-service`, `order-service` |
+| `PRODUCT_SERVICE_HOST` | `product-service.devops-techstore.svc.cluster.local` | FQDN-адреса бекенд-сервісу каталогу для Nginx reverse proxy у `frontend` |
+| `ORDER_SERVICE_HOST` | `order-service.devops-techstore.svc.cluster.local` | FQDN-адреса бекенд-сервісу замовлень для Nginx reverse proxy у `frontend` |
+| `store-config.json` | JSON-конфігурація вітрини (назва, валюта, банер) | Файл через `volumeMounts` (`subPath`) в `/usr/share/nginx/html/config/store-config.json` у `frontend` |
+
+#### 2. `Secret` (`k8s/02-secret.yaml`, тип `Opaque`, тестові неробочі дані)
+
+| Ключ | Призначення | Куди підключено |
+|------|-------------|-----------------|
+| `POSTGRES_DB` | Ім'я бази даних (`shop_db`) | `postgres` (`secretKeyRef`) |
+| `POSTGRES_USER` | Демо-користувач БД | `postgres` (`secretKeyRef`) |
+| `POSTGRES_PASSWORD` | Демо-пароль БД | `postgres` (`secretKeyRef`) |
+| `SPRING_DATASOURCE_USERNAME` | Логін для JDBC-підключення Spring Boot | `product-service`, `order-service` (`secretKeyRef`) |
+| `SPRING_DATASOURCE_PASSWORD` | Пароль для JDBC-підключення Spring Boot | `product-service`, `order-service` (`secretKeyRef`) |
+| `INTERNAL_API_KEY` | Демонстраційний сервісний API-ключ | `product-service`, `order-service` (`secretKeyRef`) |
+
+---
+
+### 🚀 Порядок розгортання з нуля в Minikube
+
+#### 1. Підготовка та запуск кластера
+```bash
+# Запустити локальний кластер із драйвером Docker
+minikube start --driver=docker --cpus=4 --memory=3072mb
+
+# Перевірити вузол та системні поди
+kubectl get nodes -o wide
+kubectl get pods -n kube-system
+
+# Увімкнути доповнення metrics-server та ingress
+minikube addons enable metrics-server
+minikube addons enable ingress
+```
+
+#### 2. Підготовка версіонованих образів (`1.0.0` і `1.1.0`)
+Образи з конкретними тегами версій публікуються у GHCR (або завантажуються напряму в Minikube):
+```bash
+docker build --build-arg APP_VERSION=1.0.0 -t ghcr.io/vlkorolenko/devops-lab1/product-service:1.0.0 ./product-service
+docker build --build-arg APP_VERSION=1.1.0 -t ghcr.io/vlkorolenko/devops-lab1/product-service:1.1.0 ./product-service
+docker build --build-arg APP_VERSION=1.0.0 -t ghcr.io/vlkorolenko/devops-lab1/order-service:1.0.0 ./order-service
+docker build --build-arg APP_VERSION=1.1.0 -t ghcr.io/vlkorolenko/devops-lab1/order-service:1.1.0 ./order-service
+docker build --build-arg APP_VERSION=1.0.0 -t ghcr.io/vlkorolenko/devops-lab1/frontend:1.0.0 ./frontend
+docker build --build-arg APP_VERSION=1.1.0 -t ghcr.io/vlkorolenko/devops-lab1/frontend:1.1.0 ./frontend
+
+# Завантаження локально зібраних образів у minikube
+minikube image load postgres:16-alpine
+minikube image load ghcr.io/vlkorolenko/devops-lab1/product-service:1.0.0
+minikube image load ghcr.io/vlkorolenko/devops-lab1/product-service:1.1.0
+minikube image load ghcr.io/vlkorolenko/devops-lab1/order-service:1.0.0
+minikube image load ghcr.io/vlkorolenko/devops-lab1/order-service:1.1.0
+minikube image load ghcr.io/vlkorolenko/devops-lab1/frontend:1.0.0
+minikube image load ghcr.io/vlkorolenko/devops-lab1/frontend:1.1.0
+```
+
+#### 3. Розгортання всього застосунку однією командою
+```bash
+kubectl apply -f k8s/
+# або через Makefile:
+make k8s-up
+```
+
+#### 4. Перевірка об'єктів та відкриття застосунку
+```bash
+# Перегляд усіх створених об'єктів у namespace devops-techstore
+kubectl get all,ingress,pvc,cm,secret -n devops-techstore
+
+# Доступ до фронтенду на macOS (Docker driver):
+# Варіант 1 (NodePort через minikube):
+minikube service frontend -n devops-techstore --url
+
+# Варіант 2 (через Ingress + minikube tunnel):
+minikube tunnel
+```
+
+Детальний звіт із збереженим виводом команд для етапів розгортання, керування життєвим циклом (самовідновлення, масштабування, rolling update, rollback) і діагностики наведено у файлі [`LAB3_REPORT.md`](LAB3_REPORT.md).
