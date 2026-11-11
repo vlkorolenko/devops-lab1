@@ -20,5 +20,6 @@ Thumbs.db
 .m2/
 postgres_data/
 
-# Logs
+# Logs and temporary Office lock files
 *.log
+~$*
