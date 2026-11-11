@@ -281,4 +281,4 @@ minikube service frontend -n devops-techstore --url
 minikube tunnel
 ```
 
-Детальний звіт із збереженим виводом команд для етапів розгортання, керування життєвим циклом (самовідновлення, масштабування, rolling update, rollback) і діагностики наведено у файлі [`LAB3_REPORT.md`](LAB3_REPORT.md).
+Детальний звіт із збереженим виводом команд і скріншотами всіх етапів (кластер Minikube, розгортання `k8s/`, браузерні тести, самовідновлення, масштабування, Rolling Update/Rollback, діагностика та CI/CD) наведено у файлах [`LAB3_REPORT.md`](LAB3_REPORT.md), [`LAB3_REPORT.pdf`](LAB3_REPORT.pdf) та [`LAB3_REPORT.docx`](LAB3_REPORT.docx), а самі скріншоти збережено в каталозі [`docs/screenshots/`](docs/screenshots/).

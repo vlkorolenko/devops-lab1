@@ -1,9 +1,11 @@
 # Лабораторна робота №3: Розгортання власного застосунку в Kubernetes
 
 **Дисципліна:** Технології DevOps  
+**Студент:** Короленко Влад Романович (`vlkorolenko`)  
 **Проєкт:** `DevOps TechStore` (`product-service`, `order-service`, `frontend`, `postgres`)  
 **Кластер:** Локальний однонодовий кластер **Minikube v1.39.0** (драйвер `docker`, Kubernetes `v1.37.0`)  
-**Простір імен:** `devops-techstore`
+**Простір імен:** `devops-techstore`  
+**Готові версії звіту зі скріншотами:** [`LAB3_REPORT.pdf`](LAB3_REPORT.pdf) · [`LAB3_REPORT.docx`](LAB3_REPORT.docx) · [`docs/screenshots/`](docs/screenshots/)
 
 ---
 
@@ -18,13 +20,17 @@
 | **5. Розгортання та перевірка** | Розгортання однією командою `kubectl apply -f k8s/`, перевірка API/UI, метрик, `ConfigMap` і `Secret` | ✅ Виконано |
 | **6. Життєвий цикл** | Самовідновлення, масштабування (2→4) з балансуванням, Rolling Update (`1.0.0`→`1.1.0`) без простою, `rollout history` і Rollback (`1.1.0`→`1.0.0`) | ✅ Виконано |
 | **7. Діагностика** | Симуляція `ImagePullBackOff`, інспекція `Events` через `describe`, `logs` і `exec`, виправлення та відновлення | ✅ Виконано |
-| **8. Документація і Git** | Чистий `k8s/`, оновлений [`README.md`](README.md), звіт [`LAB3_REPORT.md`](LAB3_REPORT.md) | ✅ Виконано |
+| **8. Документація і Git** | Чистий `k8s/`, оновлений [`README.md`](README.md), звіт зі скріншотами ([`LAB3_REPORT.md`](LAB3_REPORT.md), [`LAB3_REPORT.docx`](LAB3_REPORT.docx), [`LAB3_REPORT.pdf`](LAB3_REPORT.pdf)) | ✅ Виконано |
 
 ---
 
 ## 1. Підготовка версіонованих контейнерних образів (`1.0.0` і `1.1.0`)
 
 Для уникнення використання нестабільного тегу `latest` зібрано та завантажено у Minikube версіоновані образи обох версій (`1.0.0` та `1.1.0`) для мікросервісів проєкту та базової БД `postgres:16-alpine`. Також у [`.github/workflows/ci.yml`](.github/workflows/ci.yml) додано підтримку Git-тегів `v*` для публікації версіонованих multi-arch образів у GHCR.
+
+![Успішне виконання CI/CD пайплайна GitHub Actions для main та тегів v1.0.0 і v1.1.0](docs/screenshots/11-github-actions-ci.png)
+
+*Рис. 1.1 — Успішне виконання CI/CD пайплайна GitHub Actions для гілки `main` та релізних тегів `v1.0.0` і `v1.1.0` із публікацією в GHCR.*
 
 ```text
 $ minikube image ls | grep -E 'devops-lab1|postgres'
@@ -40,6 +46,10 @@ docker.io/library/postgres:16-alpine
 ---
 
 ## 2. Локальний кластер Minikube, вузол та аддони
+
+![Стан кластера Minikube, системні поди kube-system та аддони](docs/screenshots/01-cluster-addons.png)
+
+*Рис. 2.1 — Стан кластера Minikube, вузол `minikube`, системні поди `kube-system`, аддони `metrics-server` і `ingress`, `kubectl top nodes` та завантажені образи.*
 
 ```text
 $ minikube status
@@ -100,6 +110,10 @@ minikube   711m         8%       2174Mi          55%
 ## 5. Розгортання з нуля та перевірка працездатності
 
 ### 5(a)–5(b). Розгортання однією командою та інспекція об'єктів
+
+![Розгортання маніфестів kubectl apply та ресурси кластера](docs/screenshots/02-deploy-objects.png)
+
+*Рис. 5.1 — Розгортання маніфестів командою `kubectl apply -f k8s/`, перелік Pod / Deployment / ReplicaSet / Service / Ingress / PVC та метрики `kubectl top pods`.*
 
 ```text
 $ kubectl apply -f k8s/
@@ -178,6 +192,14 @@ product-service-545fb94449-kfntg   494m         127Mi
 
 ### 5(c). Перевірка веб-застосунку через Ingress, NodePort та PostgreSQL
 
+![Робота веб-застосунку DevOps TechStore v1.0.0 у браузері](docs/screenshots/03-browser-techstore-v1.png)
+
+*Рис. 5.2 — Робота веб-застосунку DevOps TechStore (`v1.0.0`) у браузері через Ingress: каталог товарів із PostgreSQL, метадані пода, банер із ConfigMap та статус «Всі сервіси UP».*
+
+![Модальне вікно Історія замовлень у браузері](docs/screenshots/04-browser-orders-modal.png)
+
+*Рис. 5.3 — Модальне вікно «Історія замовлень (Order Service)» у браузері: підтверджене збереження замовлення `#1` у PostgreSQL.*
+
 ```text
 $ curl -i -s http://127.0.0.1:18090/k8s-info
 HTTP/1.1 200 OK
@@ -212,6 +234,10 @@ $ kubectl exec -n devops-techstore deploy/postgres -- psql -U shop_user -d shop_
 ```
 
 ### 5(d). Підтвердження потрапляння `ConfigMap` та `Secret` у контейнери
+
+![Перевірка змінних оточення ConfigMap і Secret та actuator info](docs/screenshots/05-configmap-secret.png)
+
+*Рис. 5.4 — Перевірка змінних оточення `ConfigMap`/`Secret` усередині контейнерів, змонтованого файлу `store-config.json` та `/actuator/product-service/info`.*
 
 ```text
 $ kubectl exec -n devops-techstore deploy/product-service -- env | grep -E '^(SPRING_DATASOURCE_|APP_|LOGGING_LEVEL_|INTERNAL_API_KEY)' | sort
@@ -272,6 +298,10 @@ frontend-5d88869466-zt46s   1/1     Running   0          7s
 
 Після масштабування `frontend` до 4 реплік запити через `NodePort` (`kube-proxy`) та `Ingress` (`ingress-nginx`) рівномірно розподіляються між усіма чотирма подами:
 
+![Демонстрація самовідновлення та балансування на 4 репліки](docs/screenshots/06-self-healing-scaling.png)
+
+*Рис. 6.1 — Самовідновлення після видалення пода (`ReplicaSet` створює новий под) та масштабування `2 -> 4` з балансуванням 20 запитів на `NodePort` і `Ingress`.*
+
 ```text
 $ kubectl scale deployment/frontend -n devops-techstore --replicas=4
 deployment.apps/frontend scaled
@@ -302,6 +332,10 @@ deployment.apps/frontend scaled
 ### 6(c) та 6(e). Rolling Update (`1.0.0 -> 1.1.0`) без переривання доступності
 
 Під час оновлення образу `frontend` та `product-service` до версії `1.1.0` фоновий зонд безперервно опитував `/k8s-info`. Стратегія `maxUnavailable: 0, maxSurge: 1` разом із `readinessProbe` забезпечила **100% доступність (33 з 33 запитів зі статусом `HTTP 200 OK`, 0 відмов)**:
+
+![Вітрина DevOps TechStore v1.1.0 у браузері під час Rolling Update](docs/screenshots/07-browser-techstore-v1-1-0.png)
+
+*Рис. 6.2 — Вітрина DevOps TechStore у браузері після Rolling Update на версію `v1.1.0`.*
 
 ```text
 $ kubectl set image deployment/frontend frontend=ghcr.io/vlkorolenko/devops-lab1/frontend:1.1.0 -n devops-techstore
@@ -335,6 +369,10 @@ $ curl -s http://127.0.0.1:18090/actuator/product-service/info
 
 ### 6(d). Історія оновлень та відкат (`1.1.0 -> 1.0.0`)
 
+![Rolling Update 1.0.0 -> 1.1.0, безперервне HTTP-зондування та Rollback](docs/screenshots/08-rolling-update-rollback.png)
+
+*Рис. 6.3 — Процес Rolling Update `1.0.0 -> 1.1.0`, безперервне HTTP-зондування (`33/33 HTTP 200`, `Failures=0`) та Rollback до `1.0.0`.*
+
 ```text
 $ kubectl rollout history deployment/frontend -n devops-techstore
 deployment.apps/frontend
@@ -362,6 +400,10 @@ $ curl -s http://127.0.0.1:18090/actuator/product-service/info
 ## 7. Діагностика проблем у кластері та відновлення
 
 ### 7(a)–7(b). Симуляція неіснуючого тегу (`ErrImagePull` / `ImagePullBackOff`) та перегляд Events
+
+![Діагностика ImagePullBackOff та Events через kubectl describe pod](docs/screenshots/09-diagnostics-imagepullbackoff.png)
+
+*Рис. 7.1 — Симуляція неіснуючого тегу `frontend:9.9.9-nonexistent` (`ErrImagePull` / `ImagePullBackOff`) та перегляд секції `Events` через `kubectl describe pod`.*
 
 ```text
 $ kubectl set image deployment/frontend frontend=ghcr.io/vlkorolenko/devops-lab1/frontend:9.9.9-nonexistent -n devops-techstore
@@ -407,6 +449,10 @@ frontend-5d88869466-f2hn6
 ```
 
 ### 7(d). Виправлення тегу та повернення до працездатного стану
+
+![Перегляд логів, інспекція контейнера та повне відновлення кластера](docs/screenshots/10-logs-exec-recovery.png)
+
+*Рис. 7.2 — Перегляд логів (`kubectl logs`), інспекція контейнера (`kubectl exec`), виправлення тегу назад на `1.0.0` та відновлення всіх подів (`Running`, `RESTARTS: 0`).*
 
 ```text
 $ kubectl set image deployment/frontend frontend=ghcr.io/vlkorolenko/devops-lab1/frontend:1.0.0 -n devops-techstore
