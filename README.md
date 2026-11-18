@@ -1,6 +1,6 @@
-# DevOps TechStore — Лабораторні роботи №1, №2 та №3
+# DevOps TechStore — Лабораторні роботи №1, №2, №3 та №4
 **Предмет:** Технології DevOps  
-**Теми:** «Віртуалізація та контейнеризація» (Лаб 1), «Continuous Integration & Delivery» (Лаб 2) та «Розгортання власного застосунку в Kubernetes» (Лаб 3)
+**Теми:** «Віртуалізація та контейнеризація» (Лаб 1), «Continuous Integration & Delivery» (Лаб 2), «Розгортання власного застосунку в Kubernetes» (Лаб 3) та «Пакування застосунку в Helm-чарт» (Лаб 4)
 
 ---
 
@@ -282,3 +282,109 @@ minikube tunnel
 ```
 
 Детальний звіт із збереженим виводом команд і скріншотами всіх етапів (кластер Minikube, розгортання `k8s/`, браузерні тести, самовідновлення, масштабування, Rolling Update/Rollback, діагностика та CI/CD) наведено у файлах [`LAB3_REPORT.md`](LAB3_REPORT.md), [`LAB3_REPORT.pdf`](LAB3_REPORT.pdf) та [`LAB3_REPORT.docx`](LAB3_REPORT.docx), а самі скріншоти збережено в каталозі [`docs/screenshots/`](docs/screenshots/).
+
+---
+
+## 📦 Лабораторна робота №4: Пакування застосунку в Helm-чарт
+
+У межах лабораторної роботи №4 Kubernetes-маніфести з ЛР3 було повністю трансформовано у повноцінний, параметризований **Helm-чарт v2** (`chart/`), підготовлено окремі конфігураційні профілі для середовищ розробки (`values-dev.yaml`) та промислової експлуатації (`values-prod.yaml`), додано автоматичні тести релізу (`helm test`) та хуки життєвого циклу (`post-install` / `post-upgrade`).
+
+### 1. Структура Helm-чарту (`chart/`)
+
+```
+chart/
+├── Chart.yaml                  # Метадані чарту: name, version, appVersion, type, icon
+├── values.yaml                 # Базові значення за замовчуванням (середовище розробки Dev)
+├── values-dev.yaml             # Оверрайди для локальної розробки (1 репліка, невеликі ресурси)
+├── values-prod.yaml            # Оверрайди для промислового середовища (2 репліки, Ingress, більші ресурси)
+└── templates/                  # Шаблони Kubernetes-маніфестів
+    ├── _helpers.tpl            # Іменовані шаблони (name, fullname, labels, selectorLabels)
+    ├── NOTES.txt               # Інструкції користувачеві після розгортання релізу
+    ├── configmap.yaml          # Динамічний ConfigMap (FQDN сервісів, змінні оточення, store-config.json)
+    ├── secret.yaml             # Secret для паролів PostgreSQL та внутрішнього API-ключа
+    ├── postgres-pvc.yaml       # PersistentVolumeClaim для PostgreSQL (з прапорцем enabled)
+    ├── postgres-service.yaml   # Service для PostgreSQL (ClusterIP :5432)
+    ├── postgres-deployment.yaml# Deployment PostgreSQL зі збереженням на PVC / emptyDir
+    ├── product-service-service.yaml    # Service для product-service (ClusterIP :8081)
+    ├── product-service-deployment.yaml # Deployment product-service (Spring Boot)
+    ├── order-service-service.yaml      # Service для order-service (ClusterIP :8082)
+    ├── order-service-deployment.yaml   # Deployment order-service (Spring Boot)
+    ├── frontend-service.yaml   # Service для Frontend (NodePort :30080 / ClusterIP)
+    ├── frontend-deployment.yaml# Deployment Frontend (Nginx SPA + Reverse Proxy)
+    ├── ingress.yaml            # Ingress для зовнішнього доступу (з прапорцем enabled)
+    ├── post-install-hook.yaml  # Helm Hook (Job post-install / post-upgrade валідації)
+    └── tests/
+        └── test-connection.yaml# Helm Test Pod для автоматичної перевірки доступності фронтенду
+```
+
+### 2. Різниця між `version` та `appVersion`
+
+У файлі [`chart/Chart.yaml`](chart/Chart.yaml) визначено два ключових поля версіонування:
+* **`version` (1.0.0)** — версія самого Helm-чарта як артефакту пакування відповідно до специфікації SemVer. Вона змінюється, коли модифікуються самі шаблони Helm (додаються нові поля в маніфести, змінюються helpers, додаються хуки чи правила валідації values), навіть якщо код мікросервісів не змінювався.
+* **`appVersion` ("1.0.0")** — версія самого прикладного застосунку (**DevOps TechStore**), яка відповідає тегам контейнерних образів у реєстрі GHCR (`ghcr.io/vlkorolenko/devops-lab1/*:1.0.0`). Коли розробники випускають новий реліз коду (наприклад `1.1.0`), оновлюється `appVersion`, що дозволяє чарту за замовчуванням розгортати відповідні версії образів.
+
+### 3. Параметри конфігурації (`values.yaml`)
+
+| Параметр | Опис | Значення за замовчуванням (Dev) | Промислове середовище (`values-prod.yaml`) |
+|---|---|---|---|
+| `config.appStoreName` | Назва веб-магазину у заголовку | `DevOps TechStore (Helm Dev)` | `DevOps TechStore (Production)` |
+| `config.appEnvironment` | Ідентифікатор робочого середовища | `helm-dev` | `production` |
+| `config.currency` | Валюта відображення цін | `USD` | `USD` |
+| `config.banner` | Текст банера в інтерфейсі SPA | `Лабораторна робота №4 • Helm Chart (Development)` | `Лабораторна робота №4 • Промислове середовище (Production)` |
+| `frontend.replicaCount` | Кількість реплік frontend | `1` | `2` |
+| `frontend.image.tag` | Версія Docker-образу frontend | `1.0.0` | `1.1.0` |
+| `frontend.service.type` | Тип Kubernetes Service для frontend | `NodePort` | `NodePort` / `ClusterIP` |
+| `frontend.service.nodePort` | Порт NodePort для прямого доступу | `30080` | `30080` |
+| `frontend.resources.requests.cpu` / `memory` | Гарантовані ресурси frontend | `50m` / `32Mi` | `100m` / `64Mi` |
+| `frontend.resources.limits.cpu` / `memory` | Ліміти ресурсів frontend | `150m` / `64Mi` | `250m` / `128Mi` |
+| `productService.replicaCount` | Кількість реплік каталогу товарів | `1` | `2` |
+| `productService.image.tag` | Версія образу product-service | `1.0.0` | `1.1.0` |
+| `productService.resources.requests` | Ресурси product-service (req) | `100m` / `160Mi` | `200m` / `256Mi` |
+| `productService.resources.limits` | Ресурси product-service (lim) | `300m` / `256Mi` | `600m` / `512Mi` |
+| `orderService.replicaCount` | Кількість реплік сервісу замовлень | `1` | `2` |
+| `orderService.image.tag` | Версія образу order-service | `1.0.0` | `1.1.0` |
+| `orderService.resources.requests` | Ресурси order-service (req) | `100m` / `160Mi` | `200m` / `256Mi` |
+| `orderService.resources.limits` | Ресурси order-service (lim) | `300m` / `256Mi` | `600m` / `512Mi` |
+| `postgres.enabled` | Прапорець увімкнення вбудованої PostgreSQL | `true` | `true` |
+| `postgres.persistence.enabled` | Прапорець постійного сховища (PVC) | `true` | `true` |
+| `postgres.persistence.size` | Розмір тому PVC для PostgreSQL | `1Gi` | `2Gi` |
+| `ingress.enabled` | Прапорець увімкнення Ingress | `false` | `true` |
+| `ingress.className` | Клас Ingress контролера | `nginx` | `nginx` |
+
+### 4. Інструкції встановлення та управління життєвим циклом
+
+```bash
+# 1. Перевірка чарту на помилки та лінтинг
+helm lint chart/
+
+# 2. Сухий прогін і рендеринг маніфестів
+helm template techstore chart/
+
+# 3. Встановлення релізу в середовищі розробки (Dev)
+helm install techstore ./chart -n devops-techstore --create-namespace
+
+# 4. Перегляд статусу та параметрів релізу
+helm list -n devops-techstore
+helm status techstore -n devops-techstore
+helm get values techstore -n devops-techstore
+
+# 5. Оновлення релізу зміною тегу frontend через аргумент CLI --set
+helm upgrade techstore ./chart --set frontend.image.tag=1.1.0 -n devops-techstore
+
+# 6. Оновлення релізу до промислового середовища (Production) через values-prod.yaml
+helm upgrade techstore ./chart -f chart/values-prod.yaml -n devops-techstore
+
+# 7. Запуск автоматичних тестів релізу (Helm Test)
+helm test techstore -n devops-techstore --logs
+
+# 8. Перегляд історії ревізій релізу
+helm history techstore -n devops-techstore
+
+# 9. Відкат релізу до першої ревізії (Rollback)
+helm rollback techstore 1 -n devops-techstore
+
+# 10. Повне видалення релізу однією командою
+helm uninstall techstore -n devops-techstore
+```
+
+Детальний звіт із кожним окремим пунктом і підпунктом методички (1a–10c), письмовими поясненнями та скріншотами команд оформлено у файлах [`LAB4_REPORT.md`](LAB4_REPORT.md), [`LAB4_REPORT.pdf`](LAB4_REPORT.pdf) та [`LAB4_REPORT.docx`](LAB4_REPORT.docx), а скріншоти зібрано в [`docs/screenshots/lab4/`](docs/screenshots/lab4/).

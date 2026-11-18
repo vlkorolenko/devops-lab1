@@ -1,0 +1,37 @@
+========================================================================
+DevOps TechStore Helm Chart
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+App Version: {{ .Chart.AppVersion }}
+Chart Version: {{ .Chart.Version }}
+========================================================================
+
+Дякуємо за встановлення DevOps TechStore!
+
+Застосунок розгорнуто в просторі імен: {{ .Release.Namespace }}
+
+1. Отримання статусу компонентів:
+   kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Доступ до вебінтерфейсу (Frontend):
+{{- if .Values.ingress.enabled }}
+   Ingress увімкнено. Відкрийте браузер за адресою:
+   {{- range .Values.ingress.hosts }}
+     http://{{ .host }}{{ (index .paths 0).path }}
+   {{- end }}
+{{- else if eq .Values.frontend.service.type "NodePort" }}
+   Використовується NodePort сервіс.
+   В середовищі Minikube виконайте:
+     export NODE_IP=$(minikube ip)
+     export NODE_PORT={{ .Values.frontend.service.nodePort }}
+     echo "Відкрийте в браузері: http://${NODE_IP}:${NODE_PORT}"
+{{- else }}
+   Використовуйте port-forward для доступу:
+     kubectl port-forward service/{{ include "techstore.fullname" . }}-frontend 8080:{{ .Values.frontend.service.port }} -n {{ .Release.Namespace }}
+     Відкрийте в браузері: http://localhost:8080
+{{- end }}
+
+3. Запуск автоматичних тестів релізу:
+   helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+========================================================================

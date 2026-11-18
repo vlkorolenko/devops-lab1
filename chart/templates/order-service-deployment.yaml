@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "techstore.fullname" . }}-order-service
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+    app: order-service
+    tier: backend
+spec:
+  replicas: {{ .Values.orderService.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "techstore.selectorLabels" . | nindent 6 }}
+      app: order-service
+  template:
+    metadata:
+      labels:
+        {{- include "techstore.labels" . | nindent 8 }}
+        app: order-service
+        tier: backend
+    spec:
+      containers:
+        - name: order-service
+          image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.orderService.image.pullPolicy }}
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -Xms96m -Xmx192m"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "techstore.fullname" . }}-config
+                  key: SPRING_DATASOURCE_URL
+            - name: APP_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "techstore.fullname" . }}-config
+                  key: APP_ENVIRONMENT
+            - name: APP_STORE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "techstore.fullname" . }}-config
+                  key: APP_STORE_NAME
+            - name: SPRING_JPA_SHOW_SQL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "techstore.fullname" . }}-config
+                  key: SPRING_JPA_SHOW_SQL
+            - name: LOGGING_LEVEL_COM_DEVOPS_SHOP
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "techstore.fullname" . }}-config
+                  key: LOGGING_LEVEL_COM_DEVOPS_SHOP
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "techstore.fullname" . }}-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "techstore.fullname" . }}-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "techstore.fullname" . }}-secret
+                  key: INTERNAL_API_KEY
+          resources:
+            {{- toYaml .Values.orderService.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5

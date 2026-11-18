@@ -1,0 +1,62 @@
+# Production environment overrides
+config:
+  appEnvironment: "production"
+  appStoreName: "DevOps TechStore (Production)"
+  banner: "Лабораторна робота №4 • Промислове середовище (Production)"
+
+frontend:
+  replicaCount: 2
+  image:
+    tag: "1.1.0"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "64Mi"
+    limits:
+      cpu: "250m"
+      memory: "128Mi"
+
+productService:
+  replicaCount: 2
+  image:
+    tag: "1.1.0"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "600m"
+      memory: "512Mi"
+
+orderService:
+  replicaCount: 2
+  image:
+    tag: "1.1.0"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "600m"
+      memory: "512Mi"
+
+postgres:
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "192Mi"
+    limits:
+      cpu: "400m"
+      memory: "384Mi"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
