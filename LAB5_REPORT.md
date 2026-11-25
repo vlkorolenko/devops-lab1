@@ -11,24 +11,39 @@
 
 ### 1a) Структура репозиторію конфігурації GitOps (App of Apps)
 
-Для реалізації декларативного підходу GitOps у проєкті організовано структуру за шаблоном App of Apps. Створено каталог bootstrap/ з кореневим маніфестом root.yaml, каталог argocd-apps/ з описом дочірніх додатків (techstore.yaml) та каталог charts/techstore/ з Helm-чартом мікросервісного застосунку TechStore. Така ієрархія дозволяє керувати всіма сервісами кластера через єдину точку входу в Git.
+Для реалізації декларативного підходу GitOps у проєкті організовано структуру за шаблоном App of Apps. Створено каталог bootstrap/ з кореневим маніфестом root.yaml, каталог argocd-apps/ з описом дочірніх додатків (techstore.yaml) та каталог charts/techstore/ з Helm-чартом мікросервісного застосунку TechStore. Така ієрархія дозволяє керувати всіма сервісами кластера через єдину точку входу в Git. Структуру наочно відображено як у файловому дереві Antigravity IDE, так і у веб-інтерфейсі GitHub-репозиторію та в терміналі.
 
-![Рис. 1a — Структура каталогів GitOps-репозиторію (bootstrap, argocd-apps, charts/techstore).](docs/screenshots/lab5/1a-gitops-repo-structure.png)
-*Рис. 1a — Структура каталогів GitOps-репозиторію (bootstrap, argocd-apps, charts/techstore).*
+![Рис. 1a-1 — Провідник проєкту в Antigravity IDE зі структурою каталогів GitOps (bootstrap, argocd-apps, charts).](docs/screenshots/lab5/ide-repo-structure.png)
+*Рис. 1a-1 — Провідник проєкту в Antigravity IDE зі структурою каталогів GitOps (bootstrap, argocd-apps, charts).*
+
+![Рис. 1a-2 — Структура репозиторію на GitHub (https://github.com/vlkorolenko/devops-lab1).](docs/screenshots/lab5/github-repo-overview.png)
+*Рис. 1a-2 — Структура репозиторію на GitHub (https://github.com/vlkorolenko/devops-lab1).*
+
+![Рис. 1a-3 — Перевірка ієрархії файлів через команду tree у консолі термінала.](docs/screenshots/lab5/1a-gitops-repo-structure.png)
+*Рис. 1a-3 — Перевірка ієрархії файлів через команду tree у консолі термінала.*
 
 ### 1b) Обмеження CI-пайплайну фільтром шляхів (paths-ignore)
 
-У робочому процесі GitHub Actions (.github/workflows/ci.yml) налаштовано секцію paths-ignore для подій push та pull_request. Шляхи 'bootstrap/**', 'argocd-apps/**', 'charts/**', 'docs/**' та звіти виключено з тригерів збірки Docker-образів. Це усуває паразитні цикли збірки та перевипуску контейнерів при суто інфраструктурних змінах конфігурації у Git.
+У робочому процесі GitHub Actions (.github/workflows/ci.yml) налаштовано секцію paths-ignore для подій push та pull_request. Шляхи 'bootstrap/**', 'argocd-apps/**', 'charts/**', 'docs/**' та файли звітів виключено з тригерів збірки Docker-образів. Це усуває паразитні цикли збірки та перевипуску контейнерів при суто інфраструктурних змінах конфігурації у Git.
 
-![Рис. 1b — Налаштування paths-ignore у .github/workflows/ci.yml для запобігання зайвим збіркам CI.](docs/screenshots/lab5/1b-ci-paths-ignore.png)
-*Рис. 1b — Налаштування paths-ignore у .github/workflows/ci.yml для запобігання зайвим збіркам CI.*
+![Рис. 1b-1 — Налаштування секції paths-ignore у файлі .github/workflows/ci.yml в Antigravity IDE.](docs/screenshots/lab5/ide-ci-paths-ignore.png)
+*Рис. 1b-1 — Налаштування секції paths-ignore у файлі .github/workflows/ci.yml в Antigravity IDE.*
+
+![Рис. 1b-2 — Огляд виконань робочих процесів на сторінці GitHub Actions.](docs/screenshots/lab5/github-actions.png)
+*Рис. 1b-2 — Огляд виконань робочих процесів на сторінці GitHub Actions.*
+
+![Рис. 1b-3 — Перегляд налаштувань paths-ignore у терміналі.](docs/screenshots/lab5/1b-ci-paths-ignore.png)
+*Рис. 1b-3 — Перегляд налаштувань paths-ignore у терміналі.*
 
 ### 1c) Управління секретами через existingSecret
 
 Для дотримання стандартів безпеки GitOps конфіденційні дані (паролі БД, API-ключі) не зберігаються у відкритому вигляді в репозиторії Git. У Helm-шаблоні charts/techstore/templates/secret.yaml додано умову {{- if not .Values.existingSecret }}. У values-minikube.yaml вказано existingSecret: techstore-secret. Секрет створено безпосередньо у просторі імен devops-techstore вручну за допомогою kubectl create secret generic. Argo CD не видаляє цей секрет навіть при увімкненому prune, оскільки він не містить анотацій відстеження Git.
 
-![Рис. 1c — Умовний рендеринг секрету в Helm та перевірка наявності techstore-secret у кластері.](docs/screenshots/lab5/1c-secret-handling.png)
-*Рис. 1c — Умовний рендеринг секрету в Helm та перевірка наявності techstore-secret у кластері.*
+![Рис. 1c-1 — Шаблон secret.yaml з умовою existingSecret в редакторі Antigravity IDE.](docs/screenshots/lab5/ide-secret-handling.png)
+*Рис. 1c-1 — Шаблон secret.yaml з умовою existingSecret в редакторі Antigravity IDE.*
+
+![Рис. 1c-2 — Умовний рендеринг секрету в Helm та перевірка наявності techstore-secret у кластері.](docs/screenshots/lab5/1c-secret-handling.png)
+*Рис. 1c-2 — Умовний рендеринг секрету в Helm та перевірка наявності techstore-secret у кластері.*
 
 ---
 
@@ -52,141 +67,162 @@
 
 Створено спеціалізований файл значень charts/techstore/values-minikube.yaml. У ньому визначено: existingSecret: techstore-secret, pullPolicy: IfNotPresent для швидкого запуску з локального кешу, початковий тег образу tag: '1.0.0', налаштування сервісу frontend як NodePort (порт 30080) та прапорець вимкнення зовнішнього Ingress для мінімізації навантаження на тестовий кластер.
 
-![Рис. 2c — Вміст конфігураційного файлу charts/techstore/values-minikube.yaml.](docs/screenshots/lab5/2c-values-minikube.png)
-*Рис. 2c — Вміст конфігураційного файлу charts/techstore/values-minikube.yaml.*
+![Рис. 2c-1 — Вміст конфігураційного файлу charts/techstore/values-minikube.yaml в Antigravity IDE.](docs/screenshots/lab5/ide-values-minikube.png)
+*Рис. 2c-1 — Вміст конфігураційного файлу charts/techstore/values-minikube.yaml в Antigravity IDE.*
+
+![Рис. 2c-2 — Перегляд файлу values-minikube.yaml у репозиторії на GitHub.](docs/screenshots/lab5/github-values-minikube.png)
+*Рис. 2c-2 — Перегляд файлу values-minikube.yaml у репозиторії на GitHub.*
+
+![Рис. 2c-3 — Перевірка вмісту values-minikube.yaml у вікні консолі.](docs/screenshots/lab5/2c-values-minikube.png)
+*Рис. 2c-3 — Перевірка вмісту values-minikube.yaml у вікні консолі.*
 
 ---
 
 ## 3. Встановлення та налаштування Argo CD
 
-### 3a) Розгортання Argo CD у виділеному просторі імен argocd
+### 3a) Встановлення Argo CD у кластер Minikube
 
-Виконано розгортання системи безперервного доставлення Argo CD стабільної версії v3.6.3 у виділений простір імен argocd за допомогою офіційного маніфесту install.yaml із застосуванням server-side apply: kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml.
+Створено виділений простір імен argocd та застосовано офіційні маніфести розгортання стабільної версії Argo CD v3.6.3 за допомогою команди kubectl apply.
 
-![Рис. 3a — Створення простору імен argocd та застосування маніфестів контролера.](docs/screenshots/lab5/3a-argocd-install.png)
-*Рис. 3a — Створення простору імен argocd та застосування маніфестів контролера.*
+![Рис. 3a — Застосування маніфестів встановлення Argo CD у простір імен argocd.](docs/screenshots/lab5/3a-argocd-install.png)
+*Рис. 3a — Застосування маніфестів встановлення Argo CD у простір імен argocd.*
 
 ### 3b) Перевірка стану подів Argo CD
 
-Перевірено стан усіх 7 компонентів Argo CD: application-controller-0, applicationset-controller, dex-server, notifications-controller, redis, repo-server та argocd-server. Усі поди успішно перейшли у стан 1/1 Running без перезапусків (0 restarts).
+Виконано перевірку стану подів у просторі імен argocd. Усі ключові компоненти системи: repo-server, application-controller, applicationset-controller, redis, dex-server, notifications-controller та argocd-server перейшли у стан 1/1 Running.
 
-![Рис. 3b — Усі 7 подів компонентів Argo CD у стані 1/1 Running.](docs/screenshots/lab5/3b-argocd-pods-running.png)
-*Рис. 3b — Усі 7 подів компонентів Argo CD у стані 1/1 Running.*
+![Рис. 3b — Усі поди компонентів Argo CD успішно запущені (1/1 Running).](docs/screenshots/lab5/3b-argocd-pods-running.png)
+*Рис. 3b — Усі поди компонентів Argo CD успішно запущені (1/1 Running).*
 
-### 3c) Встановлення та верифікація CLI argocd
+### 3c) Встановлення та перевірка версії клієнта Argo CD CLI
 
-На робочій машині macOS встановлено офіційну клієнтську утиліту argocd CLI версії v3.6.3 за допомогою Homebrew. За допомогою команди argocd version підтверджено повну сумісність версій між клієнтом CLI та сервером у кластері Minikube.
+На локальну робочу станцію macOS встановлено клієнтську утиліту argocd CLI відповідної версії v3.6.3 та виконано перевірку зв'язку з кластером.
 
-![Рис. 3c — Вивід команди argocd version (клієнт та сервер v3.6.3).](docs/screenshots/lab5/3c-argocd-cli-version.png)
-*Рис. 3c — Вивід команди argocd version (клієнт та сервер v3.6.3).*
+![Рис. 3c — Перевірка версії клієнта argocd CLI та підключення до API сервера.](docs/screenshots/lab5/3c-argocd-cli-version.png)
+*Рис. 3c — Перевірка версії клієнта argocd CLI та підключення до API сервера.*
 
-### 3d) Доступ до Argo CD Web UI через перенаправлення портів
+### 3d) Налаштування доступу до Web UI Argo CD
 
-Організовано доступ до веб-інтерфейсу керування через фоновий процес port-forward: kubectl -n argocd port-forward svc/argocd-server 8080:443. Перевірено успішне встановлення HTTPS-з'єднання з веб-сервером через curl -k -I https://localhost:8080/.
+Організовано доступ до веб-інтерфейсу керування через прокидання портів kubectl port-forward на локальний порт 8080 (https://localhost:8080). Веб-інтерфейс надає повний контроль над життєвим циклом додатків та візуалізацією ресурсів кластера.
 
-![Рис. 3d — Перевірка доступності веб-інтерфейсу Argo CD на порту 8080.](docs/screenshots/lab5/3d-argocd-web-ui-access.png)
-*Рис. 3d — Перевірка доступності веб-інтерфейсу Argo CD на порту 8080.*
+![Рис. 3d-1 — Веб-інтерфейс Argo CD Web UI (https://localhost:8080) зі списком активних додатків.](docs/screenshots/lab5/lab5-argocd-ui-apps.png)
+*Рис. 3d-1 — Веб-інтерфейс Argo CD Web UI (https://localhost:8080) зі списком активних додатків.*
 
-### 3e) Аутентифікація адміністратора, оновлення пароля та видалення початкового секрету
+![Рис. 3d-2 — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.](docs/screenshots/lab5/3d-argocd-web-ui-access.png)
+*Рис. 3d-2 — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.*
 
-Зчитано початковий згенерований пароль адміністратора за допомогою команди argocd admin initial-password -n argocd. Виконано вхід у систему через CLI (argocd login localhost:8080). Встановлено новий надійний пароль через команду argocd account update-password. Відповідно до вимог безпеки початковий секрет видалено командою kubectl -n argocd delete secret argocd-initial-admin-secret.
+### 3e) Автентифікація адміністратора та зміна пароля
 
-![Рис. 3e — Аутентифікація в CLI, оновлення пароля admin та видалення initial-admin-secret.](docs/screenshots/lab5/3e-argocd-admin-login-pwd.png)
-*Рис. 3e — Аутентифікація в CLI, оновлення пароля admin та видалення initial-admin-secret.*
+Отримано первинний пароль адміністратора з секрету argocd-initial-admin-secret, виконано вхід через argocd login, встановлено постійний пароль DevOps2026Lab5! за допомогою команди argocd account update-password та безпечно видалено тимчасовий секрет з кластера.
+
+![Рис. 3e — Процедура отримання первинного пароля, оновлення пароля та видалення початкового секрету.](docs/screenshots/lab5/3e-argocd-admin-login-pwd.png)
+*Рис. 3e — Процедура отримання первинного пароля, оновлення пароля та видалення початкового секрету.*
 
 ---
 
 ## 4. Застосунок під керуванням Argo CD (App of Apps)
 
-### 4a) Маніфест кореневого додатку (bootstrap/root.yaml)
+### 4a) Маніфест кореневого додатку bootstrap/root.yaml
 
-Створено маніфест bootstrap/root.yaml типу Application у просторі імен argocd. Він націлений на каталог argocd-apps віддаленого Git-репозиторію (гілка main) та містить політику автоматичної синхронізації з опціями prune: true та selfHeal: true. Будь-який новий файл маніфесту додатку, доданий у argocd-apps/, автоматично підхоплюється цим кореневим додатком.
+Створено маніфест кореневого застосунку root за патерном App of Apps. Додаток розміщено в просторі імен argocd, він відстежує директорію argocd-apps/ репозиторію та має активовану політику автоматичної синхронізації з prune: true та selfHeal: true.
 
-![Рис. 4a — Вміст маніфесту кореневого додатку bootstrap/root.yaml.](docs/screenshots/lab5/4a-root-application-yaml.png)
-*Рис. 4a — Вміст маніфесту кореневого додатку bootstrap/root.yaml.*
+![Рис. 4a-1 — Кореневий маніфест bootstrap/root.yaml в середовищі Antigravity IDE.](docs/screenshots/lab5/ide-root-yaml.png)
+*Рис. 4a-1 — Кореневий маніфест bootstrap/root.yaml в середовищі Antigravity IDE.*
 
-### 4b) Маніфест дочірнього додатку TechStore (argocd-apps/techstore.yaml)
+![Рис. 4a-2 — Відображення маніфесту bootstrap/root.yaml у веб-інтерфейсі GitHub.](docs/screenshots/lab5/github-root-yaml.png)
+*Рис. 4a-2 — Відображення маніфесту bootstrap/root.yaml у веб-інтерфейсі GitHub.*
 
-Створено дочірній маніфест argocd-apps/techstore.yaml. Він вказує на шлях charts/techstore, задає передачу файлу параметрів helm.valueFiles: [values-minikube.yaml] та цільовий namespace devops-techstore з увімкненою опцією автоматичного створення простору імен CreateNamespace=true. Початково параметр selfHeal вимкнено для подальшої демонстрації дрейфу в п. 6.
+![Рис. 4a-3 — Вміст маніфесту bootstrap/root.yaml у консолі.](docs/screenshots/lab5/4a-root-application-yaml.png)
+*Рис. 4a-3 — Вміст маніфесту bootstrap/root.yaml у консолі.*
 
-![Рис. 4b — Вміст маніфесту дочірнього додатку argocd-apps/techstore.yaml.](docs/screenshots/lab5/4b-techstore-application-yaml.png)
-*Рис. 4b — Вміст маніфесту дочірнього додатку argocd-apps/techstore.yaml.*
+### 4b) Маніфест дочірнього додатку argocd-apps/techstore.yaml
 
-### 4c) Єдине ручне застосування кореневого маніфесту
+Створено маніфест дочірнього додатку techstore. Він посилається на Helm-чарт у каталозі charts/techstore, використовує файл переозначення значень values-minikube.yaml та націлений на простір імен devops-techstore.
 
-Згідно з філософією GitOps, у кластер виконується рівно одне ручне застосування маніфесту: kubectl apply -f bootstrap/root.yaml. Усі подальші дії — виявлення дочірнього додатку techstore, рендеринг Helm-шаблонів, створення ресурсів Kubernetes та відстеження оновлень — здійснюються Argo CD автономно.
+![Рис. 4b-1 — Маніфест argocd-apps/techstore.yaml в Antigravity IDE з увімкненим selfHeal.](docs/screenshots/lab5/ide-techstore-yaml.png)
+*Рис. 4b-1 — Маніфест argocd-apps/techstore.yaml в Antigravity IDE з увімкненим selfHeal.*
 
-![Рис. 4c — Єдиний ручний kubectl apply маніфесту bootstrap/root.yaml.](docs/screenshots/lab5/4c-manual-root-apply.png)
-*Рис. 4c — Єдиний ручний kubectl apply маніфесту bootstrap/root.yaml.*
+![Рис. 4b-2 — Маніфест argocd-apps/techstore.yaml на GitHub.](docs/screenshots/lab5/github-techstore-yaml.png)
+*Рис. 4b-2 — Маніфест argocd-apps/techstore.yaml на GitHub.*
 
-### 4d) Перевірка списку та детального статусу додатків у Argo CD
+![Рис. 4b-3 — Перегляд маніфесту argocd-apps/techstore.yaml у терміналі.](docs/screenshots/lab5/4b-techstore-application-yaml.png)
+*Рис. 4b-3 — Перегляд маніфесту argocd-apps/techstore.yaml у терміналі.*
 
-Командами argocd app list та argocd app get techstore перевірено стан створених об'єктів. Обидва додатки (root та techstore) успішно набули статусів Synced та Healthy. Згенеровано повне дерево ресурсів: ConfigMap, PVC, 4 сервіси, 4 розгортання Deployment та пост-інсталяційний Job.
+### 4c) Застосування кореневого додатку root.yaml
 
-![Рис. 4d-1 — Список додатків argocd app list та дерево об'єктів techstore у CLI.](docs/screenshots/lab5/4d-argocd-apps-status.png)
-*Рис. 4d-1 — Список додатків argocd app list та дерево об'єктів techstore у CLI.*
+Виконано єдину ручну команду розгортання всього проєкту: kubectl apply -f bootstrap/root.yaml. Усі подальші дії кластер і контролер Argo CD виконують повністю автоматично.
 
-![Рис. 4d-2 — Веб-інтерфейс Argo CD: картки додатків root та techstore зі статусом Synced/Healthy.](docs/screenshots/lab5/lab5-argocd-ui-apps.png)
-*Рис. 4d-2 — Веб-інтерфейс Argo CD: картки додатків root та techstore зі статусом Synced/Healthy.*
+![Рис. 4c — Ручне застосування кореневого маніфесту root.yaml для старту GitOps-оркестрації.](docs/screenshots/lab5/4c-manual-root-apply.png)
+*Рис. 4c — Ручне застосування кореневого маніфесту root.yaml для старту GitOps-оркестрації.*
 
-![Рис. 4d-3 — Веб-інтерфейс Argo CD: повне дерево об'єктів мікросервісного додатку TechStore.](docs/screenshots/lab5/lab5-argocd-ui-tree.png)
-*Рис. 4d-3 — Веб-інтерфейс Argo CD: повне дерево об'єктів мікросервісного додатку TechStore.*
+### 4d) Перевірка стану додатків в Argo CD
 
-### 4e) Перевірка розгорнутих подів мікросервісів у devops-techstore
+Командами argocd app list та argocd app get techstore зафіксовано повну синхронізацію: обидва застосунки (кореневий root та дочірній techstore) мають статус Synced та Healthy.
 
-Командою kubectl -n devops-techstore get pods -o wide перевірено стан подів застосунку. Усі чотири мікросервіси (techstore-frontend, techstore-order-service, techstore-product-service, techstore-postgres) успішно перейшли у стан 1/1 Running і пройшли перевірки готовності Readiness Probe.
+![Рис. 4d-1 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD.](docs/screenshots/lab5/lab5-argocd-ui-tree.png)
+*Рис. 4d-1 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD.*
 
-![Рис. 4e — Поди мікросервісів TechStore у просторі імен devops-techstore.](docs/screenshots/lab5/4e-techstore-pods-running.png)
-*Рис. 4e — Поди мікросервісів TechStore у просторі імен devops-techstore.*
+![Рис. 4d-2 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI.](docs/screenshots/lab5/4d-argocd-apps-status.png)
+*Рис. 4d-2 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI.*
 
-### 4f) Перевірка helm list та роль Helm у GitOps
+### 4e) Перевірка стану подів застосунку
 
-Виконано команду helm list -n devops-techstore. Список виявився порожнім. Це фундаментальна особливість архітектури Argo CD: він використовує Helm виключно як templating engine (викликає helm template на боці repo-server), отримує підсумкові чисті YAML-маніфести Kubernetes і застосовує їх самостійно. Argo CD не створює Helm Secret-релізів і керує життєвим циклом об'єктів через власні CRD (Application).
+Перевірено стан робочих навантажень у просторі імен devops-techstore: поди frontend, product-service, order-service та postgres успішно запущені та готові до прийому трафіку (1/1 Running).
 
-![Рис. 4f — Команда helm list -n devops-techstore повертає порожній список.](docs/screenshots/lab5/4f-helm-list-empty.png)
-*Рис. 4f — Команда helm list -n devops-techstore повертає порожній список.*
+![Рис. 4e — Усі поди застосунку TechStore у просторі імен devops-techstore перебувають у стані Running.](docs/screenshots/lab5/4e-techstore-pods-running.png)
+*Рис. 4e — Усі поди застосунку TechStore у просторі імен devops-techstore перебувають у стані Running.*
+
+### 4f) Перевірка helm list (відсутність релізів)
+
+Команда helm list -n devops-techstore повернула порожній результат. Дано детальне теоретичне пояснення: Argo CD використовує Helm суто як шаблонізатор (helm template) на стороні repo-server, застосовує отримані маніфести напряму до Kubernetes API та відстежує їх через власні CRD Application. Helm Release Secret при цьому не створюється, що запобігає конфліктам подвійного керування.
+
+![Рис. 4f — Команда helm list повертає порожній результат, що підтверджує архітектуру GitOps.](docs/screenshots/lab5/4f-helm-list-empty.png)
+*Рис. 4f — Команда helm list повертає порожній результат, що підтверджує архітектуру GitOps.*
 
 ---
 
-## 5. Оновлення застосунку через Git (Release 1.1.0)
+## 5. Оновлення через Git (Git-driven Release 1.1.0)
 
-### 5a) Оновлення версії образу в charts/techstore/values-minikube.yaml
+### 5a) Зміна тегу образу у файлі values-minikube.yaml
 
-У файлі charts/techstore/values-minikube.yaml внесено зміну: тег образу frontend.image.tag змінено з '1.0.0' на '1.1.0'. Різницю зафіксовано командою git diff.
+У конфігураційному файлі charts/techstore/values-minikube.yaml змінено тег образу frontend з 1.0.0 на 1.1.0 без жодних модифікацій у живому кластері.
 
-![Рис. 5a — Зміна тегу образу на 1.1.0 у values-minikube.yaml (git diff).](docs/screenshots/lab5/5a-release-diff-tag.png)
-*Рис. 5a — Зміна тегу образу на 1.1.0 у values-minikube.yaml (git diff).*
+![Рис. 5a — Диференціал (git diff) зміни версії образу tag: 1.0.0 -> 1.1.0.](docs/screenshots/lab5/5a-release-diff-tag.png)
+*Рис. 5a — Диференціал (git diff) зміни версії образу tag: 1.0.0 -> 1.1.0.*
 
-### 5b) Фіксація релізу в Git (commit & push)
+### 5b) Фіксація змін та push до Git-репозиторію
 
-Зміни закомічено у локальний репозиторій Git із повідомленням 'Release techstore 1.1.0' та відправлено у віддалений репозиторій GitHub командою git push origin main. Відповідно до правил GitOps, це єдина необхідна дія для доставки змін у кластер.
+Зміни додано в індекс, зафіксовано комітом 'Release techstore 1.1.0' та відправлено у віддалену гілку main на GitHub. Історію комітів зафіксовано на веб-сторінці GitHub та в консолі.
 
-![Рис. 5b — Git commit та push релізу 1.1.0 до віддаленої гілки main.](docs/screenshots/lab5/5b-git-commit-push-release.png)
-*Рис. 5b — Git commit та push релізу 1.1.0 до віддаленої гілки main.*
+![Рис. 5b-1 — Історія комітів на GitHub із зафіксованим релізом версії 1.1.0.](docs/screenshots/lab5/github-commits-history.png)
+*Рис. 5b-1 — Історія комітів на GitHub із зафіксованим релізом версії 1.1.0.*
 
-### 5c) Примусове опитування та синхронізація в Argo CD
+![Рис. 5b-2 — Створення коміту релізу та push до репозиторію GitHub у терміналі.](docs/screenshots/lab5/5b-git-commit-push-release.png)
+*Рис. 5b-2 — Створення коміту релізу та push до репозиторію GitHub у терміналі.*
 
-Щоб не чекати планового інтервалу опитування Git (до 3 хвилин), викликано команду argocd app get techstore --refresh. Argo CD зафіксував оновлений хеш коміту 9bd5ab0, миттєво відрендерив новий шаблон та виконав синхронізацію у кластер.
+### 5c) Ініціація синхронізації в Argo CD
 
-![Рис. 5c — Запуск синхронізації через --refresh та перехід додатку в статус Synced.](docs/screenshots/lab5/5c-argocd-sync-refresh.png)
-*Рис. 5c — Запуск синхронізації через --refresh та перехід додатку в статус Synced.*
+Для прискорення опитування репозиторію викликано команду argocd app get techstore --refresh. Argo CD зафіксував новий коміт у Git, перевів стан у OutOfSync і запустив автоматичну синхронізацію.
 
-### 5d) Плавне оновлення подів у кластері (RollingUpdate)
+![Рис. 5c — Запит примусового оновлення стану та запуск автоматичної синхронізації.](docs/screenshots/lab5/5c-argocd-sync-refresh.png)
+*Рис. 5c — Запит примусового оновлення стану та запуск автоматичної синхронізації.*
 
-Завдяки стратегії RollingUpdate контролер Deployment створив новий под techstore-frontend з образом версії 1.1.0, дочекався проходження readiness probe і лише після цього безпечно завершив старий под версії 1.0.0. Оновлення відбулося з нульовим часом простою (Zero Downtime).
+### 5d) Процес Rolling Update подів
+
+У консолі спостереження зафіксовано плавний перехід: створено новий под з образом 1.1.0, дочеканося проходження readiness probe, після чого старий под з версією 1.0.0 було коректно зупинено (Terminating).
 
 ![Рис. 5d — Стан подів після успішного завершення Rolling Update на версію 1.1.0.](docs/screenshots/lab5/5d-rolling-update-pods.png)
 *Рис. 5d — Стан подів після успішного завершення Rolling Update на версію 1.1.0.*
 
 ### 5e) Підтвердження оновлення через HTTP ендпоінт
 
-Виконано запит curl -s http://localhost:8081/k8s-info. Отримано відповідь: {"service":"frontend","version":"1.1.0","pod":"techstore-frontend-759b65948-78clc","status":"ok"}. Застосунок успішно оновлено до версії 1.1.0 без жодної ручної команди kubectl apply/edit.
+Виконано запит curl -s http://localhost:8081/k8s-info. Отримано відповідь: {"service":"frontend","version":"1.1.0","pod":"techstore-frontend-759b65948-78clc","status":"ok"}. Застосунок успішно оновлено до версії 1.1.0 без жодної ручної команди kubectl apply/edit. Також підтверджено працездатність інтерфейсу магазину у веб-браузері.
 
-![Рис. 5e-1 — Перевірка оновленої версії застосунку через curl /k8s-info.](docs/screenshots/lab5/5e-verify-version-110.png)
-*Рис. 5e-1 — Перевірка оновленої версії застосунку через curl /k8s-info.*
+![Рис. 5e-1 — Веб-інтерфейс TechStore v1.1.0 у браузері з активними мікросервісами.](docs/screenshots/lab5/lab5-browser-techstore.png)
+*Рис. 5e-1 — Веб-інтерфейс TechStore v1.1.0 у браузері з активними мікросервісами.*
 
-![Рис. 5e-2 — Веб-інтерфейс TechStore v1.1.0 у браузері з активними мікросервісами.](docs/screenshots/lab5/lab5-browser-techstore.png)
-*Рис. 5e-2 — Веб-інтерфейс TechStore v1.1.0 у браузері з активними мікросервісами.*
+![Рис. 5e-2 — Перевірка оновленої версії застосунку через curl /k8s-info.](docs/screenshots/lab5/5e-verify-version-110.png)
+*Рис. 5e-2 — Перевірка оновленої версії застосунку через curl /k8s-info.*
 
 ---
 
@@ -210,8 +246,11 @@
 
 Продемонстровано правильний підхід до відкату в GitOps. Команда argocd app rollback не використовується при активній автоматичній синхронізації, оскільки Argo CD негайно поверне стан, описаний у Git. Відкат виконано шляхом створення зворотного коміту: git revert HEAD --no-edit && git push origin main. Argo CD автоматично зчитав коміт відкату 4d80c9e, повернув стан Synced / Healthy та видалив збійний под. Командою argocd app history techstore зафіксовано історію з прив'язкою кожного релізу до конкретного коміту в Git.
 
-![Рис. 6c — Відкат через git revert, історія синхронізацій в Argo CD та повернення до Healthy v1.1.0.](docs/screenshots/lab5/6c-git-rollback-history.png)
-*Рис. 6c — Відкат через git revert, історія синхронізацій в Argo CD та повернення до Healthy v1.1.0.*
+![Рис. 6c-1 — Історія комітів на GitHub після виконання git revert збійного релізу.](docs/screenshots/lab5/github-commits-history.png)
+*Рис. 6c-1 — Історія комітів на GitHub після виконання git revert збійного релізу.*
+
+![Рис. 6c-2 — Відкат через git revert, історія синхронізацій в Argo CD та повернення до Healthy v1.1.0.](docs/screenshots/lab5/6c-git-rollback-history.png)
+*Рис. 6c-2 — Відкат через git revert, історія синхронізацій в Argo CD та повернення до Healthy v1.1.0.*
 
 ---
 
