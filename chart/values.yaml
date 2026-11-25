@@ -1,6 +1,7 @@
 # Default values for techstore chart (Development environment defaults).
 nameOverride: ""
 fullnameOverride: ""
+existingSecret: ""
 
 # Application ConfigMap parameters
 config:

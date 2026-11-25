@@ -1,0 +1,49 @@
+# Development environment overrides
+config:
+  appEnvironment: "development"
+  appStoreName: "DevOps TechStore (Dev)"
+  banner: "Лабораторна робота №4 • Розробка (Dev)"
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "30m"
+      memory: "24Mi"
+    limits:
+      cpu: "100m"
+      memory: "48Mi"
+
+productService:
+  replicaCount: 1
+  image:
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "80m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "220Mi"
+
+orderService:
+  replicaCount: 1
+  image:
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "80m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "220Mi"
+
+postgres:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+ingress:
+  enabled: false

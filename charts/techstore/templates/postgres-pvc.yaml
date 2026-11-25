@@ -1,0 +1,16 @@
+{{- if and .Values.postgres.enabled .Values.postgres.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "techstore.fullname" . }}-postgres-pvc
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+    app: postgres
+    tier: database
+spec:
+  accessModes:
+    - {{ .Values.postgres.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size | default "1Gi" }}
+{{- end }}

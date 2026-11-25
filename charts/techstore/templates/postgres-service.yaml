@@ -1,0 +1,20 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "techstore.fullname" . }}-postgres
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+    app: postgres
+    tier: database
+spec:
+  type: {{ .Values.postgres.service.type }}
+  selector:
+    {{- include "techstore.selectorLabels" . | nindent 4 }}
+    app: postgres
+  ports:
+    - name: postgresql
+      protocol: TCP
+      port: {{ .Values.postgres.service.port }}
+      targetPort: 5432
+{{- end }}

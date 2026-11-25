@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "techstore.fullname" . }}-product-service
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+    app: product-service
+    tier: backend
+spec:
+  type: {{ .Values.productService.service.type }}
+  selector:
+    {{- include "techstore.selectorLabels" . | nindent 4 }}
+    app: product-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.productService.service.port }}
+      targetPort: 8081

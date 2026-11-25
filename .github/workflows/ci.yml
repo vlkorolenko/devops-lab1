@@ -4,8 +4,30 @@ on:
   push:
     branches: [ main, master ]
     tags: [ 'v*' ]
+    paths-ignore:
+      - 'bootstrap/**'
+      - 'argocd-apps/**'
+      - 'charts/**'
+      - 'chart/**'
+      - 'k8s/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'LAB*.md'
+      - 'LAB*.pdf'
+      - 'LAB*.docx'
   pull_request:
     branches: [ main, master ]
+    paths-ignore:
+      - 'bootstrap/**'
+      - 'argocd-apps/**'
+      - 'charts/**'
+      - 'chart/**'
+      - 'k8s/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'LAB*.md'
+      - 'LAB*.pdf'
+      - 'LAB*.docx'
 
 permissions:
   contents: read

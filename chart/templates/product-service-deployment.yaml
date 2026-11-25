@@ -62,17 +62,17 @@ spec:
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "techstore.fullname" . }}-secret
+                  name: {{ .Values.existingSecret | default (printf "%s-secret" (include "techstore.fullname" .)) }}
                   key: SPRING_DATASOURCE_USERNAME
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "techstore.fullname" . }}-secret
+                  name: {{ .Values.existingSecret | default (printf "%s-secret" (include "techstore.fullname" .)) }}
                   key: SPRING_DATASOURCE_PASSWORD
             - name: INTERNAL_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "techstore.fullname" . }}-secret
+                  name: {{ .Values.existingSecret | default (printf "%s-secret" (include "techstore.fullname" .)) }}
                   key: INTERNAL_API_KEY
           resources:
             {{- toYaml .Values.productService.resources | nindent 12 }}

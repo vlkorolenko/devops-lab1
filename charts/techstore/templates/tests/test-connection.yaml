@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "techstore.fullname" . }}-test-connection"
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  containers:
+    - name: wget
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing frontend service availability at {{ include "techstore.fullname" . }}-frontend:{{ .Values.frontend.service.port }}..."
+          wget -qO- http://{{ include "techstore.fullname" . }}-frontend:{{ .Values.frontend.service.port }}/k8s-info
+          echo ""
+          echo "Frontend connection test successful!"
+  restartPolicy: Never

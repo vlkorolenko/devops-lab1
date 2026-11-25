@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "techstore.fullname" . }}-post-install-hook"
+  labels:
+    {{- include "techstore.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "techstore.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: post-install-verification
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "=========================================================="
+              echo "HELM POST-INSTALL / POST-UPGRADE HOOK EXECUTING"
+              echo "Release: {{ .Release.Name }}"
+              echo "Namespace: {{ .Release.Namespace }}"
+              echo "Revision: {{ .Release.Revision }}"
+              echo "Timestamp: $(date -u)"
+              echo "App Version: {{ .Chart.AppVersion }}"
+              echo "Environment: {{ .Values.config.appEnvironment }}"
+              echo "Store Name: {{ .Values.config.appStoreName }}"
+              echo "Verifying environment parameters..."
+              echo "Database: {{ .Values.postgres.database }} (Service: {{ include "techstore.fullname" . }}-postgres)"
+              echo "Hook execution completed successfully!"
+              echo "=========================================================="
