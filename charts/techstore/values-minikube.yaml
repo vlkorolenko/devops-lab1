@@ -10,7 +10,7 @@ frontend:
   replicaCount: 1
   image:
     repository: ghcr.io/vlkorolenko/devops-lab1/frontend
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   service:
     type: NodePort
@@ -21,14 +21,14 @@ productService:
   replicaCount: 1
   image:
     repository: ghcr.io/vlkorolenko/devops-lab1/product-service
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
 
 orderService:
   replicaCount: 1
   image:
     repository: ghcr.io/vlkorolenko/devops-lab1/order-service
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
 
 postgres:
