@@ -105,11 +105,8 @@
 
 Організовано доступ до веб-інтерфейсу керування через прокидання портів kubectl port-forward на локальний порт 8080 (https://localhost:8080). Веб-інтерфейс надає повний контроль над життєвим циклом додатків та візуалізацією ресурсів кластера.
 
-![Рис. 3d-1 — Веб-інтерфейс Argo CD Web UI (https://localhost:8080) зі списком активних додатків.](docs/screenshots/lab5/lab5-argocd-ui-apps.png)
-*Рис. 3d-1 — Веб-інтерфейс Argo CD Web UI (https://localhost:8080) зі списком активних додатків.*
-
-![Рис. 3d-2 — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.](docs/screenshots/lab5/3d-argocd-web-ui-access.png)
-*Рис. 3d-2 — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.*
+![Рис. 3d — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.](docs/screenshots/lab5/3d-argocd-web-ui-access.png)
+*Рис. 3d — Налаштування port-forwarding та HTTP-відповідь 200 OK сервера Argo CD.*
 
 ### 3e) Автентифікація адміністратора та зміна пароля
 
@@ -157,13 +154,16 @@
 
 ### 4d) Перевірка стану додатків в Argo CD
 
-Командами argocd app list та argocd app get techstore зафіксовано повну синхронізацію: обидва застосунки (кореневий root та дочірній techstore) мають статус Synced та Healthy.
+Командами argocd app list та argocd app get techstore зафіксовано повну синхронізацію: обидва застосунки (кореневий root та дочірній techstore) мають статус Synced та Healthy. У вебінтерфейсі Argo CD (Applications Tiles) обидва додатки зафіксовані зеленими індикаторами Healthy Synced, а також доступне повне інтерактивне дерево топології ресурсів кластера.
 
-![Рис. 4d-1 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD.](docs/screenshots/lab5/lab5-argocd-ui-tree.png)
-*Рис. 4d-1 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD.*
+![Рис. 4d-1 — Список застосунків у вебінтерфейсі Argo CD (Applications Tiles) зі статусом Synced та Healthy.](docs/screenshots/lab5/lab5-argocd-ui-apps.png)
+*Рис. 4d-1 — Список застосунків у вебінтерфейсі Argo CD (Applications Tiles) зі статусом Synced та Healthy.*
 
-![Рис. 4d-2 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI.](docs/screenshots/lab5/4d-argocd-apps-status.png)
-*Рис. 4d-2 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI.*
+![Рис. 4d-2 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD (Deployments, Pods, Services, PVC).](docs/screenshots/lab5/lab5-argocd-ui-tree.png)
+*Рис. 4d-2 — Дерево топології ресурсів застосунку TechStore у вебінтерфейсі Argo CD (Deployments, Pods, Services, PVC).*
+
+![Рис. 4d-3 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI у терміналі.](docs/screenshots/lab5/4d-argocd-apps-status.png)
+*Рис. 4d-3 — Статус синхронізації додатків (Synced / Healthy) через argocd CLI у терміналі.*
 
 ### 4e) Перевірка стану подів застосунку
 
