@@ -1,6 +1,6 @@
-# DevOps TechStore — Лабораторні роботи №1, №2, №3 та №4
+# DevOps TechStore — Лабораторні роботи №1, №2, №3, №4 та №5
 **Предмет:** Технології DevOps  
-**Теми:** «Віртуалізація та контейнеризація» (Лаб 1), «Continuous Integration & Delivery» (Лаб 2), «Розгортання власного застосунку в Kubernetes» (Лаб 3) та «Пакування застосунку в Helm-чарт» (Лаб 4)
+**Теми:** «Віртуалізація та контейнеризація» (Лаб 1), «Continuous Integration & Delivery» (Лаб 2), «Розгортання власного застосунку в Kubernetes» (Лаб 3), «Пакування застосунку в Helm-чарт» (Лаб 4) та «GitOps: розгортання проєкту через Argo CD» (Лаб 5)
 
 ---
 
@@ -388,3 +388,117 @@ helm uninstall techstore -n devops-techstore
 ```
 
 Детальний звіт із кожним окремим пунктом і підпунктом методички (1a–10c), письмовими поясненнями та скріншотами команд оформлено у файлах [`LAB4_REPORT.md`](LAB4_REPORT.md), [`LAB4_REPORT.pdf`](LAB4_REPORT.pdf) та [`LAB4_REPORT.docx`](LAB4_REPORT.docx), а скріншоти зібрано в [`docs/screenshots/lab4/`](docs/screenshots/lab4/).
+
+---
+
+## 🐙 Лабораторна робота №5: Декларативне безперервне розгортання через GitOps та Argo CD
+
+### 1. Архітектура GitOps (App of Apps Pattern)
+
+У лабораторній роботі №5 розгортання мікросервісного додатку **TechStore** повністю переведено на методологію **GitOps** із використанням **Argo CD v3.6.3** та Helm-чарту. Репозиторій Git виступає єдиним джерелом істини (*Single Source of Truth*), а кластер Kubernetes постійно синхронізується із бажаним станом у Git.
+
+```
++--------------------------------------------------------------------------+
+|                            GitHub Repository                             |
+|                                                                          |
+|  bootstrap/root.yaml  --->  argocd-apps/techstore.yaml  --->  charts/     |
+|   (Root Application)         (Child Application)          (Helm Chart)   |
++------------------------------------+-------------------------------------+
+                                     |
+                                     | git pull / poll / webhook
+                                     v
++------------------------------------+-------------------------------------+
+|                     Kubernetes Cluster (Minikube)                        |
+|                                                                          |
+|  [argocd namespace]                                                      |
+|   Argo CD Controller  <==>  argocd-server (Web UI & CLI)                 |
+|            |                                                             |
+|            | reconciles & applies                                        |
+|            v                                                             |
+|  [devops-techstore namespace]                                            |
+|   - techstore-frontend        (Deploy + Svc NodePort)                    |
+|   - techstore-product-service (Deploy + Svc ClusterIP)                   |
+|   - techstore-order-service   (Deploy + Svc ClusterIP)                   |
+|   - techstore-postgres        (Deploy + Svc + PVC)                       |
+|   - techstore-secret          (Pre-created unmanaged Secret)             |
++--------------------------------------------------------------------------+
+```
+
+### 2. Структура файлів GitOps
+
+```
+├── bootstrap/
+│   └── root.yaml                   # Кореневий додаток (App of Apps): відстежує argocd-apps/
+├── argocd-apps/
+│   └── techstore.yaml              # Дочірній додаток: відстежує charts/techstore з values-minikube.yaml
+├── charts/
+│   └── techstore/                  # Helm-чарт застосунку
+│       ├── Chart.yaml              # Метадані чарту
+│       ├── values.yaml             # Базові налаштування
+│       ├── values-minikube.yaml    # Специфічні значення для Minikube (existingSecret, tag, NodePort)
+│       └── templates/              # Шаблони маніфестів K8s
+├── .github/workflows/
+│   └── ci.yml                      # CI-пайплайн із paths-ignore для уникнення зайвих білдів
+└── docs/screenshots/lab5/          # Скріншоти виконання всіх 27 підпунктів
+```
+
+### 3. Безпека секретів та оптимізація CI
+
+- **Управління секретами (`existingSecret`):** Секрети кластера не зберігаються у відкритому вигляді в Git. У `templates/secret.yaml` реалізовано умову `{{- if not .Values.existingSecret }}`, а сам секрет `techstore-secret` створюється адміністратором безпосередньо у кластері. Argo CD керує лише деплойментами, сервісами та PVC, не чіпаючи зовнішній секрет при `prune: true`.
+- **Фільтр тригерів CI (`paths-ignore`):** У `.github/workflows/ci.yml` налаштовано ігнорування шляхів `bootstrap/**`, `argocd-apps/**`, `charts/**`, `docs/**` та звітів, щоб зміни інфраструктурної конфігурації у GitOps не спричиняли повторне перевипускання Docker-образів.
+
+### 4. Швидкий запуск та команди управління Argo CD
+
+```bash
+# 1. Встановлення Argo CD у кластер
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.3/manifests/install.yaml
+
+# 2. Доступ до вебінтерфейсу Argo CD (порт 8080)
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+# Відкрити https://localhost:8080 (Логін: admin / Пароль: DevOps2026Lab5!)
+
+# 3. Створення простору імен і секрету застосунку
+kubectl create namespace devops-techstore
+kubectl -n devops-techstore create secret generic techstore-secret \
+  --from-literal=POSTGRES_USER=techstore_admin \
+  --from-literal=POSTGRES_PASSWORD=admin_secret_pass_2026 \
+  --from-literal=JWT_SECRET=super_secret_jwt_key_techstore_devops_2026_super_secure_key
+
+# 4. Розгортання через патерн App of Apps (одна точка входу)
+kubectl apply -f bootstrap/root.yaml
+
+# 5. Перевірка статусу синхронізації та здоров'я застосунків
+argocd app list
+argocd app get root
+argocd app get techstore
+
+# 6. Оновлення версії застосунку через Git (Git-driven Release)
+# Змінити у charts/techstore/values-minikube.yaml:
+# frontend:
+#   image:
+#     tag: "1.1.0"
+git commit -am "Release techstore 1.1.0"
+git push origin main
+argocd app get techstore --refresh
+
+# 7. Перевірка оновленої версії через HTTP ендпоінт
+curl http://localhost:8081/k8s-info
+
+# 8. Тестування самовідновлення (selfHeal) при несанкціонованому дрейфі
+kubectl scale deployment techstore-frontend --replicas=5 -n devops-techstore
+# Argo CD автоматично повертає кількість реплік до 1 відповідно до стану в Git!
+
+# 9. Відкат релізу у разі помилки (GitOps-way)
+git revert HEAD --no-edit
+git push origin main
+argocd app history techstore
+```
+
+### 5. Документація та звітність
+
+Повний детальний звіт із письмовими обґрунтуваннями всіх 7 пунктів і 27 підпунктів лабораторної роботи та скріншотами кожної консольної дії та вебінтерфейсу доступний у форматах:
+- 📄 **Microsoft Word:** [`LAB5_REPORT.docx`](LAB5_REPORT.docx) (повне оформлення, 9.5 МБ)
+- 📑 **PDF:** [`LAB5_REPORT.pdf`](LAB5_REPORT.pdf) (висока якість, 12 МБ)
+- 📝 **Markdown:** [`LAB5_REPORT.md`](LAB5_REPORT.md)
+- 🖼️ **Скріншоти:** [`docs/screenshots/lab5/`](docs/screenshots/lab5/) (30 скріншотів у високій роздільній здатності).
